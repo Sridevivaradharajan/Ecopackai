@@ -46,11 +46,12 @@ CORS(
             "origins": [ 
                 "http://localhost:3000", 
                 "http://localhost:5000", 
-                "http://127.0.0.1:5000" 
+                "http://127.0.0.1:5000",
+                "https://ecopack-yngt.onrender.com"
             ] 
         } 
     } 
-) 
+)
  
 # -------------------------------------------------- 
 # DATABASE 
@@ -80,8 +81,8 @@ oauth.register(
 # -------------------------------------------------- 
 @app.route('/auth/google') 
 def google_login(): 
-    redirect_uri = url_for('google_callback', _external=True) 
-    return oauth.google.authorize_redirect(redirect_uri) 
+    redirect_uri = url_for('google_callback', _external=True, _scheme='https') 
+    return oauth.google.authorize_redirect(redirect_uri)
  
 @app.route('/auth/google/callback') 
 def google_callback(): 
@@ -148,16 +149,19 @@ def google_callback():
         algorithm="HS256" 
     ) 
  
-    response = redirect('/dashboard') 
+    # Get base URL from environment
+    base_url = os.getenv('BASE_URL', 'http://localhost:5000')
+    
+    response = redirect(f'{base_url}/dashboard') 
     response.set_cookie(
         'token',
         jwt_token,
         httponly=True,
         samesite='Lax',
-        secure=False,
+        secure=True if 'https' in base_url else False,
         path='/'
     )
-    return response 
+    return response
  
 class MLModelManager: 
     def __init__(self): 
