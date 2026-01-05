@@ -79,88 +79,117 @@ oauth.register(
 # -------------------------------------------------- 
 # GOOGLE LOGIN 
 # -------------------------------------------------- 
-@app.route('/auth/google') 
-def google_login(): 
-    redirect_uri = url_for('google_callback', _external=True, _scheme='https') 
+@app.route('/auth/google')
+def google_login():
+    # Force HTTPS for production (Render)
+    redirect_uri = url_for('google_callback', _external=True, _scheme='https')
+    print(f"[Google Login] Redirect URI: {redirect_uri}")
     return oauth.google.authorize_redirect(redirect_uri)
- 
-@app.route('/auth/google/callback') 
-def google_callback(): 
+
+@app.route('/auth/google/callback')
+def google_callback():
+    print("\n[Google Callback] Starting...")
+    
     try:
         token = oauth.google.authorize_access_token()
-    except Exception:
+        print(f"[Google Callback] Token received: {bool(token)}")
+    except Exception as e:
+        print(f"[Google Callback] Error during authorization: {e}")
         return redirect('/?error=google_auth_failed')
- 
-    user_info = token.get('userinfo') 
-    if not user_info: 
-        user_info = oauth.google.get('userinfo').json() 
- 
-    email = user_info["email"] 
-     
-    # Check if user exists or create new one 
-    conn = get_db_connection() 
-    if not conn: 
-        return jsonify({'error': 'Database connection failed'}), 503 
-     
-    cur = conn.cursor(cursor_factory=RealDictCursor) 
-     
-    try: 
-        # Check if user exists 
-        cur.execute('SELECT id FROM users WHERE email = %s', (email,)) 
-        user = cur.fetchone() 
-         
-        if user: 
-            user_id = user['id'] 
-            # Update last login 
-            cur.execute('UPDATE users SET last_login = %s WHERE id = %s',  
-                       (datetime.datetime.now(), user_id)) 
-        else: 
-            # Register new user (Google login) 
-            # Use random password or placeholder since they login via Google 
-            # We can leave password_hash empty or put a dummy value that can't be matched 
-            full_name = user_info.get('name', email.split('@')[0]) 
-            dummy_hash = bcrypt.hashpw(os.urandom(16), bcrypt.gensalt()).decode('utf-8') 
-             
-            cur.execute( 
-                'INSERT INTO users (email, password_hash, full_name) VALUES (%s, %s, %s) RETURNING id', 
-                (email, dummy_hash, full_name) 
-            ) 
-            user_id = cur.fetchone()['id'] 
-            cur.execute('INSERT INTO user_analytics (user_id) VALUES (%s)', (user_id,)) 
-             
-        conn.commit() 
-    except Exception as e: 
-        conn.rollback() 
-        return jsonify({'error': str(e)}), 500 
-    finally: 
-        cur.close() 
-        conn.close() 
- 
-    payload = { 
-    "user_id": user_id,
-    "email": email,
-    "iat": datetime.datetime.utcnow(),
-    "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-    }
- 
-    jwt_token = jwt.encode( 
-        payload, 
-        app.config['JWT_SECRET'], 
-        algorithm="HS256" 
-    ) 
- 
-    # Get base URL from environment
-    base_url = os.getenv('BASE_URL', 'http://localhost:5000')
     
-    response = redirect(f'{base_url}/dashboard') 
+    user_info = token.get('userinfo')
+    if not user_info:
+        try:
+            user_info = oauth.google.get('userinfo').json()
+        except Exception as e:
+            print(f"[Google Callback] Error fetching userinfo: {e}")
+            return redirect('/?error=google_auth_failed')
+    
+    email = user_info.get("email")
+    if not email:
+        print("[Google Callback] No email in user_info")
+        return redirect('/?error=no_email')
+    
+    print(f"[Google Callback] Email: {email}")
+    
+    # Check if user exists or create new one
+    conn = get_db_connection()
+    if not conn:
+        print("[Google Callback] Database connection failed")
+        return redirect('/?error=database_connection_failed')
+    
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    try:
+        # Check if user exists
+        cur.execute('SELECT id FROM users WHERE email = %s', (email,))
+        user = cur.fetchone()
+        
+        if user:
+            user_id = user['id']
+            print(f"[Google Callback] Existing user found: {user_id}")
+            # Update last login
+            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', 
+                       (datetime.datetime.now(), user_id))
+        else:
+            # Register new user (Google login)
+            full_name = user_info.get('name', email.split('@')[0])
+            dummy_hash = bcrypt.hashpw(os.urandom(16), bcrypt.gensalt()).decode('utf-8')
+            
+            print(f"[Google Callback] Creating new user: {email}")
+            cur.execute(
+                'INSERT INTO users (email, password_hash, full_name) VALUES (%s, %s, %s) RETURNING id',
+                (email, dummy_hash, full_name)
+            )
+            user_id = cur.fetchone()['id']
+            cur.execute('INSERT INTO user_analytics (user_id) VALUES (%s)', (user_id,))
+            print(f"[Google Callback] New user created: {user_id}")
+        
+        conn.commit()
+    except Exception as e:
+        print(f"[Google Callback] Database error: {e}")
+        conn.rollback()
+        return redirect('/?error=database_error')
+    finally:
+        cur.close()
+        conn.close()
+    
+    # Create JWT token
+    payload = {
+        "user_id": user_id,
+        "email": email,
+        "iat": datetime.datetime.utcnow(),
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    }
+    
+    jwt_token = jwt.encode(
+        payload,
+        app.config['JWT_SECRET'],
+        algorithm="HS256"
+    )
+    
+    print(f"[Google Callback] JWT created for user {user_id}")
+    
+    # Redirect to dashboard with cookie
+    # Use the deployed URL from environment
+    dashboard_url = '/dashboard'
+    response = redirect(dashboard_url)
+    
+    # Set cookie - MUST be secure=True for HTTPS (Render)
     response.set_cookie(
         'token',
         jwt_token,
+        max_age=86400,  # 24 hours
         httponly=True,
-        samesite='Lax',
-        secure=True if 'https' in base_url else False,
+        samesite='None',  # Required for cross-site cookies in HTTPS
+        secure=True,  # Required for Render (HTTPS)
         path='/'
     )
+    
+    print(f"[Google Callback] Cookie set with secure=True, samesite=None")
+    print(f"[Google Callback] Redirecting to: {dashboard_url}")
+    print(f"[Google Callback] Host: {request.host}")
+    
     return response
  
 class MLModelManager: 
