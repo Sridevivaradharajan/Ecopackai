@@ -79,6 +79,8 @@ oauth.register(
 # -------------------------------------------------- 
 # GOOGLE LOGIN 
 # -------------------------------------------------- 
+# Replace your existing Google OAuth routes with these fixed versions
+
 @app.route('/auth/google')
 def google_login():
     # Force HTTPS for production (Render)
@@ -171,24 +173,28 @@ def google_callback():
     print(f"[Google Callback] JWT created for user {user_id}")
     
     # Redirect to dashboard with cookie
-    # Use the deployed URL from environment
     dashboard_url = '/dashboard'
     response = redirect(dashboard_url)
     
-    # Set cookie - MUST be secure=True for HTTPS (Render)
+    # FIXED: Use Lax for same-site redirect (not cross-origin)
+    # samesite='None' is only needed for cross-origin requests
+    # Since we're redirecting to our own domain, use 'Lax'
     response.set_cookie(
         'token',
         jwt_token,
         max_age=86400,  # 24 hours
         httponly=True,
-        samesite='None',  # Required for cross-site cookies in HTTPS
+        samesite='Lax',  # Changed from 'None' - we're on same domain
         secure=True,  # Required for Render (HTTPS)
-        path='/'
+        path='/',
+        domain=None  # Let browser set it automatically
     )
     
-    print(f"[Google Callback] Cookie set with secure=True, samesite=None")
+    print(f"[Google Callback] Cookie set with secure=True, samesite=Lax")
+    print(f"[Google Callback] JWT Token (first 20 chars): {jwt_token[:20]}...")
     print(f"[Google Callback] Redirecting to: {dashboard_url}")
     print(f"[Google Callback] Host: {request.host}")
+    print(f"[Google Callback] User ID: {user_id}")
     
     return response
  
