@@ -1,0 +1,2781 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>EcoPackAI - Smart Food Packaging Recommendations 🌿</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"> 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script> 
+    <style> 
+        :root { 
+            --charcoal: #2C3E50; 
+            --asparagus: #27AE60;
+            --asparagus-dark: #229954;
+            --burlywood: #95A5A6; 
+            --melon: #E74C3C; 
+            --misty-grey: #F8FAFC;
+            --white: #ffffff;
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+            
+            /* Professional Industrial Chart Colors */
+            --chart-blue: #1F77B4;
+            --chart-orange: #FF7F0E;
+            --chart-green: #2CA02C;
+            --chart-red: #D62728;
+            --chart-purple: #9467BD;
+            --chart-brown: #8C564B;
+            --chart-pink: #E377C2;
+            --chart-gray: #7F7F7F;
+            --chart-olive: #BCBD22;
+            --chart-cyan: #17BECF;
+            
+             /* Current/Baseline color */
+            --chart-current: #525252;
+            
+            /* Professional Stat Card Colors */
+            --stat-purple: #6366F1;
+            --stat-purple-dark: #4F46E5;
+            --stat-blue: #0EA5E9;
+            --stat-blue-dark: #0284C7;
+            --stat-green: #22C55E;
+            --stat-green-dark: #16A34A;
+            --stat-amber: #FB923C;
+            --stat-amber-dark: #F97316;
+        }
+         
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        } 
+         
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--misty-grey); 
+            color: var(--charcoal);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            line-height: 1.5;
+        }
+         
+        .navbar { 
+            background: var(--charcoal); 
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
+            padding: 0.75rem 2rem; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+         
+        .navbar-brand { 
+            font-size: 1.35rem; 
+            font-weight: 600; 
+            color: white !important; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.5rem; 
+        }
+         
+        .sidebar { 
+            background: var(--white); 
+            min-height: calc(100vh - 80px); 
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.08); 
+            padding: 2rem 1rem; 
+            position: sticky; 
+            top: 80px; 
+        } 
+         
+        .nav-pills .nav-link { 
+            color: #6B7280; 
+            border-radius: var(--border-radius-sm); 
+            padding: 0.75rem 1rem; 
+            margin-bottom: 0.5rem; 
+            transition: all 0.2s ease; 
+            font-weight: 500; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            font-size: 0.95rem;
+        }
+         
+        .nav-pills .nav-link:hover { 
+            background: #F3F4F6; 
+            color: var(--charcoal); 
+            transform: translateX(4px); 
+        }
+         
+        .nav-pills .nav-link.active { 
+            background: var(--asparagus); 
+            color: white; 
+            box-shadow: none; 
+        }
+         
+        .card { 
+            border: 1px solid #E5E7EB; 
+            border-radius: var(--border-radius-md); 
+            background: var(--white); 
+            box-shadow: var(--shadow-sm); 
+            transition: box-shadow 0.2s ease; 
+            overflow: hidden; 
+        }
+         
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: none;
+        }
+         
+        .card-header { 
+            background: var(--white); 
+            border-bottom: 1px solid #E5E7EB; 
+            padding: 1.25rem 1.5rem; 
+        }
+         
+        .card-header h4 { 
+            font-size: 1.25rem; 
+            font-weight: 600; 
+            color: #1F2937; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.75rem; 
+            margin: 0; 
+        }
+         
+        .stat-card { 
+            color: white; 
+            border: none;
+            border-radius: var(--border-radius-md);
+        }
+        
+        .stat-card.recommendations { 
+            background: linear-gradient(135deg, var(--stat-purple) 0%, var(--stat-purple-dark) 100%); 
+        }
+        
+        .stat-card.cost-savings { 
+            background: linear-gradient(135deg, var(--stat-blue) 0%, var(--stat-blue-dark) 100%); 
+        }
+        
+        .stat-card.co2-impact { 
+            background: linear-gradient(135deg, var(--stat-green) 0%, var(--stat-green-dark) 100%); 
+        }
+        
+        .stat-card.sustainability { 
+            background: linear-gradient(135deg, var(--stat-amber) 0%, var(--stat-amber-dark) 100%); 
+        }
+         
+        .stat-card .card-body { 
+            position: relative; 
+            z-index: 1; 
+            padding: 2rem; 
+        } 
+         
+        .metric-icon { 
+            font-size: 2.5rem; 
+            opacity: 0.9; 
+            margin-bottom: 0.5rem; 
+        }
+         
+        .stat-card h3 { 
+            font-size: 2.25rem; 
+            font-weight: 700; 
+            margin: 0.5rem 0; 
+            text-shadow: none; 
+        }
+         
+        .form-label { 
+            font-weight: 600; 
+            color: #374151; 
+            margin-bottom: 0.5rem; 
+            font-size: 0.875rem;
+            text-transform: none;
+        }
+         
+        .form-control, .form-select { 
+            border: 1px solid #D1D5DB; 
+            border-radius: var(--border-radius-sm); 
+            padding: 0.625rem 0.875rem; 
+            transition: border-color 0.2s ease, box-shadow 0.2s ease; 
+            font-size: 0.95rem; 
+        }
+         
+        .form-control:focus, .form-select:focus {
+            border-color: var(--asparagus);
+            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+            outline: none;
+        }
+         
+        .btn-primary { 
+            background: var(--asparagus); 
+            border: none; 
+            border-radius: var(--border-radius-sm); 
+            padding: 0.75rem 1.5rem; 
+            font-weight: 600; 
+            font-size: 1rem; 
+            transition: all 0.2s ease; 
+            box-shadow: none; 
+        }
+         
+        .btn-primary:hover {
+            background: var(--asparagus-dark);
+            transform: none;
+            box-shadow: var(--shadow-sm);
+        }
+         
+        .recommendation-card { 
+            border-left: 4px solid var(--asparagus); 
+            background: var(--white); 
+            border: 1px solid #E5E7EB;
+            border-left: 4px solid var(--asparagus);
+            transition: all 0.2s ease; 
+            border-radius: var(--border-radius-md); 
+            margin-bottom: 1rem; 
+            padding: 1.25rem; 
+        }
+         
+        .recommendation-card:hover { 
+            border-left-color: var(--asparagus-dark); 
+            background: #F9FAFB; 
+            transform: translateX(2px); 
+            box-shadow: var(--shadow-sm);
+        }
+         
+        .badge-savings { 
+            background: #D1FAE5; 
+            color: #065F46;
+            padding: 0.5rem 0.75rem; 
+            border-radius: var(--border-radius-sm); 
+            font-weight: 600; 
+            font-size: 0.875rem; 
+        }
+         
+        .badge-increase { 
+            background: linear-gradient(135deg, #d62828 0%, #dc143c 100%); 
+            padding: 0.6rem 1.25rem; 
+            border-radius: 10px; 
+            font-weight: 700; 
+            font-size: 1rem; 
+        } 
+         
+        .loading-spinner { 
+            padding: 4rem; 
+            text-align: center; 
+        } 
+         
+        .spinner-border { 
+            width: 4rem; 
+            height: 4rem; 
+            border-width: 0.4rem; 
+            color: var(--asparagus); 
+        } 
+         
+        .hidden { 
+            display: none; 
+        } 
+         
+        .fade-in { 
+            animation: fadeIn 0.6s ease-out; 
+        } 
+         
+        @keyframes fadeIn { 
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            } 
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            } 
+        } 
+         
+        .comparison-card { 
+            background: var(--white); 
+            border: 1px solid #E5E7EB; 
+            border-radius: var(--border-radius-md); 
+            padding: 1.5rem; 
+            transition: all 0.2s ease; 
+            text-align: center; 
+        }
+         
+        .comparison-card:hover { 
+            border-color: var(--asparagus); 
+            box-shadow: var(--shadow-md); 
+            transform: scale(1.02); 
+        }
+         
+        .material-checkbox { 
+            cursor: pointer; 
+            padding: 1rem; 
+            border: 1px solid #D1D5DB; 
+            border-radius: var(--border-radius-sm); 
+            transition: all 0.2s ease; 
+            text-align: center; 
+        }
+         
+        .material-checkbox:hover { 
+            border-color: var(--asparagus); 
+            background: #F3F4F6; 
+        }
+         
+        .material-checkbox input:checked ~ label { 
+            color: var(--asparagus); 
+            font-weight: 800; 
+        } 
+         
+        .upload-zone { 
+            border: 2px dashed #9CA3AF; 
+            border-radius: var(--border-radius-md); 
+            padding: 2.5rem; 
+            text-align: center; 
+            background: #F9FAFB; 
+            transition: all 0.2s ease; 
+            cursor: pointer; 
+        }
+         
+        .upload-zone:hover { 
+            border-color: var(--asparagus); 
+            background: #F3F4F6; 
+            box-shadow: var(--shadow-sm);
+        }
+         
+        .chart-container { 
+            position: relative; 
+            height: 350px; 
+            padding: 1.5rem; 
+        } 
+         
+        .history-item { 
+            background: var(--white); 
+            border-left: 4px solid #E5E7EB; 
+            border: 1px solid #E5E7EB;
+            border-left: 4px solid var(--asparagus);
+            border-radius: var(--border-radius-md); 
+            padding: 1.25rem; 
+            margin-bottom: 1rem; 
+            transition: all 0.2s ease; 
+        }
+         
+        .history-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+    </style> 
+</head> 
+<body> 
+    <nav class="navbar navbar-dark"> 
+    <div class="container-fluid"> 
+        <div>
+            <span class="navbar-brand"> 
+                <i class="bi bi-leaf-fill"></i> 
+                EcoPackAI 
+            </span>
+            <small class="text-white-50 ms-2" style="font-size: 0.75rem; opacity: 0.8;">Smarter Packaging. Greener Planet</small>
+        </div>
+        <div class="d-flex align-items-center gap-3"> 
+                <span class="text-white" style="font-size: 0.95rem; font-weight: 500;" id="userName">Welcome, User</span>
+                <button class="btn btn-outline-light" onclick="logout()"> 
+                    <i class="bi bi-box-arrow-right"></i> Logout 
+                </button> 
+            </div> 
+        </div> 
+    </nav> 
+ 
+    <div class="container-fluid"> 
+        <div class="row"> 
+            <div class="col-md-2 sidebar"> 
+                <ul class="nav nav-pills flex-column"> 
+                    <li class="nav-item"> 
+                        <a class="nav-link active" href="#" onclick="showSection(event, 'recommendation')"> 
+                            <i class="bi bi-box-seam-fill"></i> 
+                            <span>Recommendations</span> 
+                        </a> 
+                    </li> 
+                    <li class="nav-item"> 
+                        <a class="nav-link" href="#" onclick="showSection(event, 'compare')"> 
+                            <i class="bi bi-arrow-left-right"></i> 
+                            <span>Compare</span> 
+                        </a> 
+                    </li> 
+                    <li class="nav-item"> 
+                        <a class="nav-link" href="#" onclick="showSection(event, 'bulk')"> 
+                            <i class="bi bi-cloud-upload-fill"></i> 
+                            <span>Bulk Upload</span> 
+                        </a> 
+                    </li> 
+                    <li class="nav-item"> 
+                        <a class="nav-link" href="#" onclick="showSection(event, 'analytics')"> 
+                            <i class="bi bi-graph-up-arrow"></i> 
+                            <span>Analytics</span> 
+                        </a> 
+                    </li> 
+                    <li class="nav-item"> 
+                        <a class="nav-link" href="#" onclick="showSection(event, 'history')"> 
+                            <i class="bi bi-clock-history"></i> 
+                            <span>History</span> 
+                        </a> 
+                    </li> 
+                </ul> 
+            </div> 
+ 
+            <div class="col-md-10 p-4"> 
+                <!-- Stats Cards --> 
+                <div class="row mb-4"> 
+                    <div class="col-md-3 mb-3"> 
+                        <div class="card stat-card recommendations">
+                            <div class="card-body text-center"> 
+                                <i class="bi bi-box-seam-fill metric-icon"></i> 
+                                <h3 id="totalRecs">0</h3> 
+                                <p class="mb-0 fs-5 fw-semibold">Recommendations</p> 
+                            </div> 
+                        </div> 
+                    </div> 
+                    <div class="col-md-3 mb-3"> 
+                        <div class="card stat-card cost-savings">
+                            <div class="card-body text-center"> 
+                                <i class="bi bi-currency-rupee metric-icon"></i> 
+                                <h3 id="totalCost">₹0</h3> 
+                                <p class="mb-0 fs-5 fw-semibold">Cost Savings</p> 
+                            </div> 
+                        </div> 
+                    </div> 
+                    <div class="col-md-3 mb-3"> 
+                        <div class="card stat-card co2-impact">
+                            <div class="card-body text-center"> 
+                                <i class="bi bi-cloud-fill metric-icon"></i> 
+                                <h3 id="totalCO2">0</h3> 
+                                <p class="mb-0 fs-5 fw-semibold">CO₂ Impact Score</p> 
+                            </div> 
+                        </div> 
+                    </div>
+                    <div class="col-md-3 mb-3"> 
+                        <div class="card stat-card sustainability">
+                            <div class="card-body text-center"> 
+                                <i class="bi bi-recycle metric-icon"></i> 
+                                <h3>95%</h3> 
+                                <p class="mb-0 fs-5 fw-semibold">Sustainability</p> 
+                            </div> 
+                        </div> 
+                    </div> 
+                </div> 
+ 
+                <!-- RECOMMENDATION SECTION --> 
+                <div id="recommendationSection" class="section"> 
+                    <div class="card mb-4"> 
+                        <div class="card-header"> 
+                            <h4><i class="bi bi-basket-fill me-1" style="color: var(--asparagus);"></i> Get Food Packaging Recommendations</h4> 
+                        </div>
+                        <div class="card-body p-4"> 
+                            <form id="recForm"> 
+                                <div class="row"> 
+                                    <div class="col-md-4 mb-3"> 
+                                        <label class="form-label">Product Quantity (g)</label> 
+                                        <input type="number" class="form-control" id="pq" value="500" required> 
+                                    </div> 
+                                    <div class="col-md-4 mb-3"> 
+                                        <label class="form-label">Package Weight (g)</label> 
+                                        <input type="number" class="form-control" id="pw" value="50" required> 
+                                    </div> 
+                                    <div class="col-md-4 mb-3"> 
+                                        <label class="form-label">Weight Capacity (g)</label> 
+                                        <input type="number" class="form-control" id="wc" value="600" required> 
+                                    </div> 
+                                </div> 
+                                <div class="row"> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Number of Units</label> 
+                                        <input type="number" class="form-control" id="nu" value="1" min="1" required> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Recyclability %</label> 
+                                        <input type="number" class="form-control" id="rp" value="70" min="0" max="100" required> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Material</label> 
+                                        <select class="form-select" id="mat" required> 
+                                            <option value="aluminium">Aluminium</option>
+                                            <option value="cardboard">Cardboard</option>
+                                            <option value="glass">Glass</option>
+                                            <option value="metal">Metal</option>
+                                            <option value="paper">Paper</option>
+                                            <option value="plastic">Plastic</option>
+                                            <option value="plastic 7">Plastic 7</option>
+                                            <option value="steel">Steel</option>
+                                    </select> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Shape</label> 
+                                        <select class="form-select" id="shape" required> 
+                                            <option value="accessory">Accessory</option>
+                                            <option value="aerosol">Aerosol</option>
+                                            <option value="backing">Backing</option>
+                                            <option value="bag">Bag</option>
+                                            <option value="basket">Basket</option>
+                                            <option value="blister">Blister</option>
+                                            <option value="bottle">Bottle</option>
+                                            <option value="bowl">Bowl</option>
+                                            <option value="box">Box</option>
+                                            <option value="brick">Brick</option>
+                                            <option value="bucket">Bucket</option>
+                                            <option value="cage">Cage</option>
+                                            <option value="can">Can</option>
+                                            <option value="cap">Cap</option>
+                                            <option value="capsule">Capsule</option>
+                                            <option value="card">Card</option>
+                                            <option value="container">Container</option>
+                                            <option value="cork">Cork</option>
+                                            <option value="cylinder">Cylinder</option>
+                                            <option value="envelope">Envelope</option>
+                                            <option value="fastener">Fastener</option>
+                                            <option value="filling">Filling</option>
+                                            <option value="film">Film</option>
+                                            <option value="fork">Fork</option>
+                                            <option value="handle">Handle</option>
+                                            <option value="jar">Jar</option>
+                                            <option value="jug">Jug</option>
+                                            <option value="label">Label</option>
+                                            <option value="lid">Lid</option>
+                                            <option value="mold">Mold</option>
+                                            <option value="net">Net</option>
+                                            <option value="overpack">Overpack</option>
+                                            <option value="packaging">Packaging</option>
+                                            <option value="packet">Packet</option>
+                                            <option value="plate">Plate</option>
+                                            <option value="pot">Pot</option>
+                                            <option value="pouch">Pouch</option>
+                                            <option value="ring">Ring</option>
+                                            <option value="roll">Roll</option>
+                                            <option value="seal">Seal</option>
+                                            <option value="sheet">Sheet</option>
+                                            <option value="sleeve">Sleeve</option>
+                                            <option value="spoon">Spoon</option>
+                                            <option value="spout">Spout</option>
+                                            <option value="stick">Stick</option>
+                                            <option value="straw">Straw</option>
+                                            <option value="strip">Strip</option>
+                                            <option value="tie">Tie</option>
+                                            <option value="tray">Tray</option>
+                                            <option value="tube">Tube</option>
+                                            <option value="tumbler">Tumbler</option>
+                                            <option value="vial">Vial</option>
+                                            <option value="wedge">Wedge</option>
+                                            <option value="wrap">Wrap</option>
+                                            <option value="wrapper">Wrapper</option>
+                                        </select> 
+                                    </div> 
+                                </div> 
+                                <div class="row"> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Strength</label> 
+                                        <select class="form-select" id="str" required> 
+                                            <option value="High">High</option>
+                                            <option value="Low">Low</option>
+                                            <option value="Medium" selected>Medium</option>
+                                            <option value="Very High">Very High</option>
+                                        </select> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">Recycling Type</label> 
+                                        <select class="form-select" id="rec" required> 
+                                            <option value="Compost">Compost</option>
+                                            <option value="Deposit Return">Deposit Return</option>
+                                            <option value="Film as Plastic">Film as Plastic</option>
+                                            <option value="Inner Package as Paper">Inner Package as Paper</option>
+                                            <option value="Not Recyclable">Not Recyclable</option>
+                                            <option value="Plastic Bag - Discard">Plastic Bag - Discard</option>
+                                            <option value="Recyclable" selected>Recyclable</option>
+                                            <option value="Recyclable Bag Clip">Recyclable Bag Clip</option>
+                                            <option value="Return to Store">Return to Store</option>
+                                            <option value="Reusable">Reusable</option>
+                                            <option value="Reuse">Reuse</option>
+                                        </select> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">
+                                            <i class="bi bi-basket3 me-1" style="color: var(--asparagus);"></i>
+                                            Food Product Category
+                                        </label>
+                                        <select class="form-select" id="fg" required>
+                                            <option value="alcoholic-beverages">Alcoholic Beverages</option>
+                                            <option value="appetizers">Appetizers</option>
+                                            <option value="artificially-sweetened-beverages">Artificially Sweetened Beverages</option>
+                                            <option value="biscuits-and-cakes">Biscuits & Cakes</option>
+                                            <option value="bread">Bread</option>
+                                            <option value="breakfast-cereals">Breakfast Cereals</option>
+                                            <option value="cereals">Cereals</option>
+                                            <option value="cereals-and-potatoes">Cereals & Potatoes</option>
+                                            <option value="cheese">Cheese</option>
+                                            <option value="chocolate-products">Chocolate Products</option>
+                                            <option value="dairy-desserts">Dairy Desserts</option>
+                                            <option value="dressings-and-sauces">Dressings & Sauces</option>
+                                            <option value="dried-fruits">Dried Fruits</option>
+                                            <option value="eggs">Eggs</option>
+                                            <option value="fats">Fats</option>
+                                            <option value="fatty-fish">Fatty Fish</option>
+                                            <option value="fish-and-seafood">Fish & Seafood</option>
+                                            <option value="fish-meat-eggs">Fish, Meat & Eggs</option>
+                                            <option value="fruit-juices">Fruit Juices</option>
+                                            <option value="fruit-nectars">Fruit Nectars</option>
+                                            <option value="fruits">Fruits</option>
+                                            <option value="ice-cream">Ice Cream</option>
+                                            <option value="lean-fish">Lean Fish</option>
+                                            <option value="legumes">Legumes</option>
+                                            <option value="meat-other-than-poultry">Meat (Other than Poultry)</option>
+                                            <option value="milk-and-yogurt">Milk & Yogurt</option>
+                                            <option value="nuts">Nuts</option>
+                                            <option value="offals">Offals</option>
+                                            <option value="one-dish-meals">One Dish Meals</option>
+                                            <option value="pastries">Pastries</option>
+                                            <option value="pizza-pies-and-quiches">Pizza, Pies & Quiches</option>
+                                            <option value="plant-based-milk-substitutes">Plant-based Milk Substitutes</option>
+                                            <option value="potatoes">Potatoes</option>
+                                            <option value="poultry">Poultry</option>
+                                            <option value="processed-meat">Processed Meat</option>
+                                            <option value="salty-and-fatty-products">Salty & Fatty Products</option>
+                                            <option value="sandwiches">Sandwiches</option>
+                                            <option value="soups">Soups</option>
+                                            <option value="sweetened-beverages">Sweetened Beverages</option>
+                                            <option value="sweets">Sweets</option>
+                                            <option value="teas-and-herbal-teas-and-coffees">Teas, Herbal Teas & Coffees</option>
+                                            <option value="unsweetened-beverages">Unsweetened Beverages</option>
+                                            <option value="vegetables">Vegetables</option>
+                                            <option value="waters-and-flavored-waters">Waters & Flavored Waters</option>
+                                        </select> 
+                                    </div> 
+                                    <div class="col-md-3 mb-3"> 
+                                        <label class="form-label">No. of Alternatives</label> 
+                                        <input type="number" class="form-control" id="n_alts" value="5" min="1" max="10" required> 
+                                    </div> 
+                                </div> 
+                                <button type="submit" class="btn btn-primary btn-lg"> 
+                                    <i class="bi bi-search"></i> Get Recommendations 
+                                </button> 
+                            </form> 
+                            <div class="loading-spinner hidden" id="recLoading"> 
+                                <div class="spinner-border"></div> 
+                                <p class="mt-3 fw-bold fs-5">Analyzing alternatives...</p> 
+                            </div> 
+                        </div> 
+                    </div> 
+                    <div id="recResults" class="hidden"></div> 
+                </div> 
+ 
+                <!-- COMPARE SECTION --> 
+                <div id="compareSection" class="section hidden"> 
+                    <div class="card"> 
+                        <div class="card-header"> 
+                            <h4><i class="bi bi-arrow-left-right"></i> Compare Materials Side-by-Side</h4> 
+                        </div> 
+                        <div class="card-body p-4"> 
+                            <form id="compForm"> 
+                                <div class="row mb-4"> 
+                                    <div class="col-md-3"> 
+                                        <label class="form-label">Product Quantity (g)</label> 
+                                        <input type="number" class="form-control" id="cq" value="500"> 
+                                    </div> 
+                                    <div class="col-md-3"> 
+                                        <label class="form-label">Package Weight (g)</label> 
+                                        <input type="number" class="form-control" id="cw" value="50"> 
+                                    </div> 
+                                    <div class="col-md-3"> 
+                                        <label class="form-label">Weight Capacity (g)</label> 
+                                        <input type="number" class="form-control" id="cwc" value="600"> 
+                                    </div> 
+                                    <div class="col-md-3"> 
+                                        <label class="form-label">Shape</label> 
+                                        <select class="form-select" id="cs"> 
+                                            <option value="accessory">Accessory</option>
+                                            <option value="aerosol">Aerosol</option>
+                                            <option value="backing">Backing</option>
+                                            <option value="bag">Bag</option>
+                                            <option value="basket">Basket</option>
+                                            <option value="blister">Blister</option>
+                                            <option value="bottle" selected>Bottle</option>
+                                            <option value="bowl">Bowl</option>
+                                            <option value="box">Box</option>
+                                            <option value="brick">Brick</option>
+                                            <option value="bucket">Bucket</option>
+                                            <option value="cage">Cage</option>
+                                            <option value="can">Can</option>
+                                            <option value="cap">Cap</option>
+                                            <option value="capsule">Capsule</option>
+                                            <option value="card">Card</option>
+                                            <option value="container">Container</option>
+                                            <option value="cork">Cork</option>
+                                            <option value="cylinder">Cylinder</option>
+                                            <option value="envelope">Envelope</option>
+                                            <option value="fastener">Fastener</option>
+                                            <option value="filling">Filling</option>
+                                            <option value="film">Film</option>
+                                            <option value="fork">Fork</option>
+                                            <option value="handle">Handle</option>
+                                            <option value="jar">Jar</option>
+                                            <option value="jug">Jug</option>
+                                            <option value="label">Label</option>
+                                            <option value="lid">Lid</option>
+                                            <option value="mold">Mold</option>
+                                            <option value="net">Net</option>
+                                            <option value="overpack">Overpack</option>
+                                            <option value="packaging">Packaging</option>
+                                            <option value="packet">Packet</option>
+                                            <option value="plate">Plate</option>
+                                            <option value="pot">Pot</option>
+                                            <option value="pouch">Pouch</option>
+                                            <option value="ring">Ring</option>
+                                            <option value="roll">Roll</option>
+                                            <option value="seal">Seal</option>
+                                            <option value="sheet">Sheet</option>
+                                            <option value="sleeve">Sleeve</option>
+                                            <option value="spoon">Spoon</option>
+                                            <option value="spout">Spout</option>
+                                            <option value="stick">Stick</option>
+                                            <option value="straw">Straw</option>
+                                            <option value="strip">Strip</option>
+                                            <option value="tie">Tie</option>
+                                            <option value="tray">Tray</option>
+                                            <option value="tube">Tube</option>
+                                            <option value="tumbler">Tumbler</option>
+                                            <option value="vial">Vial</option>
+                                            <option value="wedge">Wedge</option>
+                                            <option value="wrap">Wrap</option>
+                                            <option value="wrapper">Wrapper</option>
+                                        </select> 
+                                    </div>
+                                </div> 
+                                <div class="mb-4"> 
+                                    <label class="form-label">Select Materials to Compare (2-5)</label> 
+                                    <div class="row"> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="aluminium" id="m1"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m1">Aluminium</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="cardboard" id="m2"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m2">Cardboard</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="glass" id="m3"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m3">Glass</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="metal" id="m4"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m4">Metal</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="paper" id="m5"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m5">Paper</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="plastic" id="m6"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m6">Plastic</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="plastic 7" id="m7"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m7">Plastic 7</label> 
+                                            </div> 
+                                        </div> 
+                                        <div class="col-md-2 mb-2"> 
+                                            <div class="material-checkbox"> 
+                                                <input type="checkbox" class="form-check-input" value="steel" id="m8"> 
+                                                <label class="form-check-label d-block mt-2 fw-bold" for="m8">Steel</label> 
+                                            </div> 
+                                        </div>
+                                    </div> 
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-lg"> 
+                                    <i class="bi bi-graph-up"></i> Compare Materials 
+                                </button> 
+                            </form> 
+                            <div class="loading-spinner hidden" id="compLoading"> 
+                                <div class="spinner-border"></div> 
+                                <p class="mt-3 fw-bold fs-5">Comparing materials...</p> 
+                            </div> 
+                        </div> 
+                    </div> 
+                    <div id="compResults" class="hidden"></div> 
+                </div> 
+ 
+                <!-- BULK UPLOAD SECTION --> 
+                <div id="bulkSection" class="section hidden"> 
+                    <div class="card"> 
+                        <div class="card-header"> 
+                            <h4><i class="bi bi-cloud-upload-fill"></i> Bulk Upload & Process</h4> 
+                        </div> 
+                        <div class="card-body p-4"> 
+                            <div class="upload-zone" onclick="document.getElementById('fileInput').click()"> 
+                                <i class="bi bi-cloud-upload-fill" style="font-size: 3.5rem; color: var(--burlywood);"></i> 
+                                <h4 class="fw-bold mt-3 mb-2">Upload CSV or Excel File</h4> 
+                                <p class="text-muted mb-0" style="font-size: 0.9rem;">Click to browse • Max 10MB</p>
+                                <input type="file" id="fileInput" class="d-none" accept=".csv,.xlsx,.xls" onchange="handleBulk(event)"> 
+                            </div>
+                            <div class="loading-spinner hidden" id="bulkLoading"> 
+                                <div class="spinner-border"></div> 
+                                <p class="mt-3 fw-bold fs-5">Processing your file...</p> 
+                            </div> 
+                            <div id="bulkResults" class="hidden mt-4"></div>
+                            <div id="bulkDownload" class="hidden mt-3 text-center">
+                                <button class="btn btn-primary btn-lg" onclick="downloadBulkResults()">
+                                    <i class="bi bi-download"></i> Download Results as CSV
+                                </button>
+                            </div>
+                        </div> 
+                    </div> 
+                </div> 
+ 
+                <!-- ANALYTICS SECTION --> 
+                <div id="analyticsSection" class="section hidden"> 
+                    <!-- Summary Cards Row -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                           <div class="card" style="border: 1px solid #E5E7EB; border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm); background: var(--white);">
+                                <div class="card-body p-4">
+                                    <div class="row g-4">
+                                        <div class="col-md-3 text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-graph-up-arrow" style="font-size: 2.5rem; color: var(--asparagus);"></i>
+                                            </div>
+                                            <h3 class="fw-bold mb-1" id="analyticsAvgSavings">₹0.00</h3>
+                                            <p class="text-muted mb-0 small">Avg Cost Savings per Rec</p>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-cloud-arrow-down" style="font-size: 2.5rem; color: var(--asparagus);"></i>
+                                            </div>
+                                            <h3 class="fw-bold mb-1" id="analyticsAvgCO2">0.00</h3>
+                                            <p class="text-muted mb-0 small">Avg CO₂ Reduction per Rec</p>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-calendar-check" style="font-size: 2.5rem; color: var(--charcoal);"></i>
+                                            </div>
+                                            <h3 class="fw-bold mb-1" id="analyticsThisMonth">0</h3>
+                                            <p class="text-muted mb-0 small">Recommendations This Month</p>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-trophy-fill" style="font-size: 2.5rem; color: #ffd700;"></i>
+                                            </div>
+                                            <h3 class="fw-bold mb-1" id="analyticsBestSaving">₹0.00</h3>
+                                            <p class="text-muted mb-0 small">Best Single Saving</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="row"> 
+                        <div class="col-md-6 mb-4"> 
+                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"> 
+                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h4 class="mb-1"><i class="bi bi-bar-chart-fill text-success me-2"></i>Cost Savings Trend</h4>
+                                            <small class="text-muted">Track your cost optimization over time</small>
+                                        </div>
+                                        <span class="badge" style="background: #D1FAE5; color: #065F46; font-size: 0.85rem; padding: 0.5rem 1rem; font-weight: 600;">
+                                            <i class="bi bi-arrow-up-right"></i> Trending
+                                        </span>
+                                    </div>
+                                </div> 
+                                <div class="card-body" style="padding: 2rem;"> 
+                                    <div class="chart-container" style="position: relative; height: 320px;"> 
+                                        <canvas id="costChart"></canvas> 
+                                    </div> 
+                                    <div class="mt-3 pt-3 border-top">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block mb-1">Total Saved</small>
+                                                <strong class="text-success" id="costChartTotal">₹0.00</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block mb-1">Best Period</small>
+                                                <strong class="text-success" id="costChartBest">Rec 1</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> 
+                            </div> 
+                        </div> 
+                        <div class="col-md-6 mb-4"> 
+                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"> 
+                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h4 class="mb-1"><i class="bi bi-cloud-fill me-2" style="color: var(--charcoal);"></i>CO₂ Reduction Trend</h4>
+                                            <small class="text-muted">Monitor your environmental impact</small>
+                                        </div>
+                                        <span class="badge" style="background: #DBEAFE; color: #1E40AF; font-size: 0.85rem; padding: 0.5rem 1rem; font-weight: 600;">
+                                            <i class="bi bi-graph-down"></i> Impact
+                                        </span>
+                                    </div>
+                                </div> 
+                                <div class="card-body" style="padding: 2rem;"> 
+                                    <div class="chart-container" style="position: relative; height: 320px;"> 
+                                        <canvas id="co2Chart"></canvas> 
+                                    </div>
+                                    <div class="mt-3 pt-3 border-top">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <small class="text-muted d-block mb-1">Total Reduced</small>
+                                                <strong style="color: var(--asparagus);" id="co2ChartTotal">0.00</strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted d-block mb-1">Best Period</small>
+                                                <strong style="color: var(--asparagus);" id="co2ChartBest">Rec 1</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div> 
+                            </div> 
+                        </div> 
+                    </div>
+
+                    <!-- Insights Cards Row -->
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
+                                    <h4 class="mb-0 fw-semibold" style="color: var(--charcoal);"><i class="bi bi-lightbulb-fill me-2" style="color: #F59E0B;"></i>Key Performance Insights</h4>
+                                </div>
+                                <div class="card-body p-4">
+                                    <div class="row g-4" id="analyticsInsights">
+                                        <div class="col-md-4">
+                                            <div class="p-4 text-center" style="background: linear-gradient(135deg, rgba(105, 153, 93, 0.1) 0%, rgba(105, 153, 93, 0.05) 100%); border-radius: 16px; border: 2px dashed var(--asparagus);">
+                                                <i class="bi bi-hourglass-split" style="font-size: 2rem; color: var(--asparagus);"></i>
+                                                <p class="mb-0 mt-2 text-muted">Loading insights...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- HISTORY SECTION --> 
+                <div id="historySection" class="section hidden"> 
+                    <div class="card"> 
+                        <div class="card-header"> 
+                            <h4><i class="bi bi-clock-history"></i> Your Recommendation History</h4> 
+                        </div> 
+                        <div class="card-body"> 
+                            <div id="historyList"> 
+                                <div class="text-center py-5"> 
+                                    <div class="spinner-border text-success mb-3"></div> 
+                                    <p class="text-muted">Loading your history...</p> 
+                                </div> 
+                            </div> 
+                        </div> 
+                    </div> 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+ 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script> 
+    <script> 
+
+// Place this inside <script> tags at the end of dashboard.html body 
+
+const API = '/api';
+let token = null; 
+let charts = {};
+
+// ============================================================================
+// LOAD USER INFO ON PAGE LOAD
+// ============================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadUserInfo();
+    loadAnalytics();
+    
+    // Show welcome message for first-time users
+    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome'); // Changed to sessionStorage
+    if (!hasSeenWelcome) {
+        showWelcomeMessage();
+        sessionStorage.setItem('hasSeenWelcome', 'true');
+    }
+});
+
+async function loadUserInfo() {
+    try {
+        const res = await fetch('/api/user/info', {
+            credentials: 'include'
+        });
+        
+        if (handleAuthError(res)) return;
+        
+        if (!res.ok) {
+            console.error('Failed to load user info');
+            return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.user && data.user.full_name) {
+            const firstName = data.user.full_name.split(' ')[0];
+            document.getElementById('userName').textContent = `Welcome, ${firstName}`;
+        } else {
+            document.getElementById('userName').textContent = 'Welcome';
+        }
+    } catch (e) {
+        console.error('Error loading user info:', e);
+        document.getElementById('userName').textContent = 'Welcome';
+    }
+}
+
+function showWelcomeMessage() {
+    const welcomeHtml = `
+        <div id="welcomeAlert" class="alert alert-success alert-dismissible fade show" style="border-radius: 12px; border-left: 4px solid var(--asparagus); animation: fadeIn 0.5s ease; margin-bottom: 1.5rem;">
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <h5 class="mb-2"><i class="bi bi-stars me-2"></i>Welcome to EcoPackAI!</h5>
+            <p class="mb-0">Your AI-powered assistant for optimizing <strong>food packaging</strong> with cost efficiency and environmental sustainability in mind.</p>
+        </div>
+    `;
+    
+    const mainContent = document.querySelector('.col-md-10.p-4');
+    if (mainContent) {
+        mainContent.insertAdjacentHTML('afterbegin', welcomeHtml);
+        
+        // Auto-dismiss after 8 seconds
+        setTimeout(() => {
+            const alert = document.getElementById('welcomeAlert');
+            if (alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 8000);
+    }
+}
+
+function handleAuthError(res) {
+    if (res.status === 401) {
+        showSessionError();
+        return true;
+    }
+    return false;
+}
+
+function showSessionError() {
+    if (document.getElementById('sessionErrorAlert')) return;
+    
+    const alertHtml = `
+        <div id="sessionErrorAlert" class="alert alert-danger alert-dismissible fade show fixed-top m-3 shadow" role="alert" style="z-index: 1050;">
+            <strong>Session Expired!</strong> Your session has expired or is invalid. Please <a href="#" onclick="logout(); return false;" class="alert-link">log in again</a>.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('afterbegin', alertHtml);
+}
+
+ 
+async function loadAnalytics() {
+    try {
+        const res = await fetch(`${API}/analytics/user`, {
+            credentials: 'include'
+        });
+        
+        if (handleAuthError(res)) return;
+
+        if (!res.ok) {
+            console.error(`Analytics API returned ${res.status}`);
+            document.getElementById('totalRecs').textContent = '0';
+            document.getElementById('totalCost').textContent = '₹0';
+            document.getElementById('totalCO2').textContent = '0';
+            return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.analytics) {
+            document.getElementById('totalRecs').textContent = data.analytics.total_recommendations || 0;
+            
+            // ===== COST HANDLING =====
+            const costSavings = parseFloat(data.analytics.total_cost_savings) || 0;
+            const costCard = document.querySelector('.stat-card.cost-savings');
+            const costElement = document.getElementById('totalCost');
+            const costLabel = costCard.querySelector('p');
+
+            if (costSavings >= 0) {
+                // Positive = Savings (good)
+                costElement.textContent = '₹' + costSavings.toFixed(2);
+                costLabel.textContent = 'Cost Savings';
+                costCard.style.background = 'linear-gradient(135deg, var(--stat-blue) 0%, var(--stat-blue-dark) 100%)';
+            } else {
+                // Negative = Increase (bad)
+                costElement.textContent = '₹' + costSavings.toFixed(2);  // Keep negative sign
+                costLabel.textContent = 'Cost Increase';
+                costCard.style.background = 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)';
+            }
+            
+            // ===== CO₂ HANDLING =====
+            const co2Reduction = parseFloat(data.analytics.total_co2_reduction) || 0;
+            const co2Card = document.querySelector('.stat-card.co2-impact');
+            const co2Element = document.getElementById('totalCO2');
+            const co2Label = co2Card.querySelector('p');
+            
+            if (co2Reduction >= 0) {
+                // Positive = Reduction (good)
+                co2Element.textContent = co2Reduction.toFixed(2);
+                co2Label.textContent = 'CO₂ Reduction';
+                co2Card.style.background = 'linear-gradient(135deg, var(--stat-green) 0%, var(--stat-green-dark) 100%)';
+            } else {
+                // Negative = Increase (bad)
+                co2Element.textContent = co2Reduction.toFixed(2);  // Keep negative sign
+                co2Label.textContent = 'CO₂ Increase';
+                co2Card.style.background = 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)';
+            }
+        } else {
+            document.getElementById('totalRecs').textContent = '0';
+            document.getElementById('totalCost').textContent = '₹0.00';
+            document.getElementById('totalCO2').textContent = '0.00';
+        }
+    } catch (e) {
+        console.error('Analytics error:', e);
+        document.getElementById('totalRecs').textContent = '0';
+        document.getElementById('totalCost').textContent = '₹0.00';
+        document.getElementById('totalCO2').textContent = '0.00';
+    }
+}
+
+function showSection(e, name) {
+    e.preventDefault();
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    document.getElementById(name + 'Section').classList.remove('hidden');
+    e.target.closest('.nav-link').classList.add('active');
+    
+    if (name === 'history') loadHistory();
+    if (name === 'analytics') setTimeout(() => loadCharts(), 100);
+}
+
+document.getElementById('recForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const material = document.getElementById('mat').value;
+    let parent_material = 'unknown';
+    
+    // ✅ Proper parent material mapping
+    if (['aluminium', 'metal', 'steel'].includes(material)) {
+        parent_material = 'metal';
+    } else if (['cardboard', 'paper'].includes(material)) {
+        parent_material = 'paper-or-cardboard';
+    } else if (['glass'].includes(material)) {
+        parent_material = 'glass';
+    } else if (['plastic', 'plastic 7'].includes(material)) {
+        parent_material = 'plastic';
+    } else {
+        parent_material = 'unknown';
+    }
+
+    const data = {
+        // Numeric fields
+        product_quantity: parseFloat(document.getElementById('pq').value),
+        weight_measured: parseFloat(document.getElementById('pw').value),
+        weight_capacity: parseFloat(document.getElementById('wc').value),
+        number_of_units: parseInt(document.getElementById('nu').value),
+        recyclability_percent: parseFloat(document.getElementById('rp').value),
+        
+        // Only the 6 categorical fields models use
+        material: material,
+        parent_material: parent_material,
+        shape: document.getElementById('shape').value,
+        strength: document.getElementById('str').value,
+        recycling: document.getElementById('rec').value,
+        food_group: document.getElementById('fg').value,
+        
+        // Request parameters
+        number_of_alternatives: parseInt(document.getElementById('n_alts').value)
+    };
+    
+    document.getElementById('recLoading').classList.remove('hidden');
+    document.getElementById('recResults').classList.add('hidden');
+    
+    try {
+        const res = await fetch(`${API}/recommend`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (handleAuthError(res)) return;
+
+        const result = await res.json();
+        
+        if (res.ok && result.recommendations) {
+            // FIX: Backend doesn't return all fields, so add them from form inputs
+            result.current_packaging.weight_measured = data.weight_measured;
+            result.current_packaging.weight_capacity = data.weight_capacity;
+            result.current_packaging.recycling = data.recycling;
+            result.current_packaging.food_group = data.food_group;
+            result.current_packaging.number_of_units = data.number_of_units;
+            result.current_packaging.product_quantity = data.product_quantity;
+            
+            displayRecs(result);
+            loadAnalytics(); // Refresh KPIs after new recommendation
+        } else {
+            alert('Error: ' + (result.error || 'Failed to get recommendations'));
+        }
+    } catch (e) {
+        alert('Network error: ' + e.message);
+    } finally {
+        document.getElementById('recLoading').classList.add('hidden');
+    }
+});
+
+// ============================================================================
+// COMPARE FORM
+// ============================================================================
+document.getElementById('compForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const mats = [];
+    document.querySelectorAll('.material-checkbox input:checked').forEach(cb => {
+        mats.push(cb.value);
+    });
+    
+    if (mats.length < 2) {
+        alert('Please select at least 2 materials to compare');
+        return;
+    }
+    
+    const data = {
+        materials: mats,
+        product_quantity: parseFloat(document.getElementById('cq').value),
+        weight_measured: parseFloat(document.getElementById('cw').value),
+        weight_capacity: parseFloat(document.getElementById('cwc').value),
+        shape: document.getElementById('cs').value,
+        strength: 'Medium',
+        food_group: 'fruit-juices',
+        recyclability_percent: 70,
+        number_of_units: 1,
+        recycling: 'Recyclable'
+    };
+    
+    document.getElementById('compLoading').classList.remove('hidden');
+    document.getElementById('compResults').classList.add('hidden');
+    
+    try {
+        const res = await fetch(`${API}/compare`, {
+            method: 'POST',
+            credentials: 'include',  
+            headers: {
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (handleAuthError(res)) return;
+
+        const result = await res.json();
+        if (res.ok && result.comparisons) {
+            displayComp(result, data);  // ← Now passing both result AND input data
+        } else {
+            alert('Error: ' + (result.error || 'Comparison failed'));
+        }
+    } catch (e) {
+        alert('Comparison error: ' + e.message);
+    } finally {
+        document.getElementById('compLoading').classList.add('hidden');
+    }
+});
+
+// ============================================================================
+// BULK UPLOAD
+// ============================================================================
+async function handleBulk(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validate file type
+    const validExtensions = ['csv', 'xlsx', 'xls'];
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+        alert('Please upload a CSV or Excel file (.csv, .xlsx, .xls)');
+        e.target.value = '';
+        return;
+    }
+    
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('File size exceeds 10MB. Please upload a smaller file.');
+        e.target.value = '';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    document.getElementById('bulkLoading').classList.remove('hidden');
+    document.getElementById('bulkResults').classList.add('hidden');
+    document.getElementById('bulkDownload').classList.add('hidden');
+    
+    try {
+        const res = await fetch(`${API}/bulk-upload`, {
+            method: 'POST',
+            credentials: 'include',  
+            body: formData
+        });
+        
+        if (handleAuthError(res)) return;
+
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `Server error: ${res.status}`);
+        }
+
+        const result = await res.json();
+        
+        if (!result.results || result.results.length === 0) {
+            throw new Error('No valid results returned from server');
+        }
+        
+        displayBulk(result);
+        loadAnalytics();
+    } catch (e) {
+        console.error('Bulk upload error:', e);
+        document.getElementById('bulkResults').innerHTML = `
+            <div class="alert alert-danger fade-in" style="border-radius: 12px; border: 2px solid #dc3545;">
+                <h5 class="mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i>Upload Failed</h5>
+                <p class="mb-1"><strong>Error:</strong> ${e.message}</p>
+                <hr>
+                <p class="mb-0 small">
+                    <strong>Common issues:</strong><br>
+                    • Missing required columns (product_quantity, weight_measured, weight_capacity, material, shape, strength, food_group)<br>
+                    • Invalid data format or values<br>
+                    • File is corrupted or empty<br>
+                    • Column names don't match expected format
+                </p>
+            </div>
+        `;
+        document.getElementById('bulkResults').classList.remove('hidden');
+    } finally {
+        document.getElementById('bulkLoading').classList.add('hidden');
+        e.target.value = ''; // Reset file input
+    }
+}
+
+function displayRecs(data) {
+    const c = data.current_packaging;
+    const r = data.recommendations;
+    
+    console.log('Current packaging data:', c); 
+    
+    // Helper function to format values with fallback
+    const formatValue = (val, unit = '', fallback = 'N/A') => {
+        return (val !== null && val !== undefined && val !== '' && !isNaN(val)) ? `${parseFloat(val).toFixed(2)}${unit}` : fallback;
+    };
+
+    // Find the best recommendation
+    const bestRec = r[0]; // Already sorted by improvement_score
+    
+    // Prepare chart data
+    const chartData = {
+        labels: ['Current', ...r.slice(0, 5).map((rec, i) => `Option ${i+1}`)],
+        costs: [c.cost, ...r.slice(0, 5).map(rec => rec.predicted_cost)],
+        co2s: [c.co2, ...r.slice(0, 5).map(rec => rec.predicted_co2)]
+    };
+    
+    let html = `
+        <!-- Current Packaging Card -->
+        <div class="card current-card mb-4 fade-in" style="background: linear-gradient(135deg, #fff 0%, #fef8f5 100%); border: none; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); overflow: hidden;">
+            <div class="card-header" style="background: var(--white); color: var(--charcoal); padding: 1.25rem 1.5rem; border-bottom: 1px solid #E5E7EB;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 fw-semibold" style="color: var(--charcoal);"><i class="bi bi-box-seam-fill me-2" style="color: var(--asparagus);"></i>Current Packaging Analysis</h4>
+                    <span class="badge" style="background: #E5E7EB; color: #374151; padding: 0.4rem 1rem; font-size: 0.9rem; font-weight: 600;">Baseline</span>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <!-- Specifications Column -->
+                    <div class="col-md-3">
+                        <div class="spec-group">
+                            <h6 class="text-muted mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">📋 Specifications</h6>
+                            <div class="mb-3">
+                                <i class="bi bi-box text-primary me-2"></i>
+                                <strong>Material:</strong> <span class="text-capitalize badge bg-primary">${c.material}</span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="bi bi-hexagon text-primary me-2"></i>
+                                <strong>Shape:</strong> <span class="text-capitalize">${c.shape}</span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="bi bi-shield-check text-primary me-2"></i>
+                                <strong>Strength:</strong> <span class="badge bg-info">${c.strength}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Physical Metrics Column -->
+                    <div class="col-md-3">
+                        <div class="spec-group">
+                            <h6 class="text-muted mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">⚖️ Physical Metrics</h6>
+                            <div class="mb-3">
+                                <i class="bi bi-arrow-down-up text-success me-2"></i>
+                                <strong>Package Weight:</strong><br>
+                                <span class="fs-5 fw-bold text-success">${c.weight_measured ? c.weight_measured + 'g' : 'Not specified'}</span>
+                            </div>
+                            <div class="mb-3">
+                                <i class="bi bi-box text-success me-2"></i>
+                                <strong>Weight Capacity:</strong><br>
+                                <span class="fs-5 fw-bold text-success">${c.weight_capacity ? c.weight_capacity + 'g' : 'Not specified'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Environmental Metrics Column -->
+                    <div class="col-md-3">
+                        <div class="spec-group">
+                            <h6 class="text-muted mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">♻️ Environmental</h6>
+                            <div class="mb-3">
+                                <i class="bi bi-recycle text-success me-2"></i>
+                                <strong>Recyclability:</strong><br>
+                                <div class="progress mt-2" style="height: 25px;">
+                                    <div class="progress-bar bg-success" style="width: ${c.recyclability_percent}%; font-weight: 700;">${c.recyclability_percent}%</div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <i class="bi bi-arrow-repeat text-info me-2"></i>
+                                <strong>Recycling Type:</strong><br>
+                                <span class="badge bg-info">${c.recycling || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cost & Impact Column -->
+                    <div class="col-md-3">
+                        <div class="text-center p-4" style="background: #ffffff; border-radius: 12px; border: 2px solid var(--burlywood); box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                            <div class="mb-3">
+                                <div class="text-muted mb-1" style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">PREDICTED COST</div>
+                                <div class="display-6 fw-bold" style="color: var(--charcoal);">₹${c.cost ? parseFloat(c.cost).toFixed(2) : '0.00'}</div>
+                            </div>
+                            <hr style="border-color: #dee2e6; opacity: 0.5;">
+                            <div>
+                                <div class="text-muted mb-1" style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">PREDICTED CO₂ SCORE</div>
+                                <div class="h3 fw-bold" style="color: var(--asparagus);">${c.co2 ? parseFloat(c.co2).toFixed(2) : '0.00'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- All Alternatives Table -->
+        <div class="card mb-4 fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <div class="card-header" style="background: linear-gradient(135deg, var(--asparagus) 0%, #7daf6d 100%); color: white; border: none; padding: 1.5rem 2rem;">
+                <h4 class="mb-1 fw-bold"><i class="bi bi-list-check"></i> All Sustainable Alternatives</h4>
+                <small class="opacity-75">Ranked by overall improvement • Showing all ${r.length} options</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="border-collapse: separate; border-spacing: 0;">
+                        <thead style="background: var(--misty-grey); position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Rank</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Material</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Shape</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Strength</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Cost</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Cost Change</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">CO₂ Score</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">CO₂ Change</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    r.forEach((rec, i) => {
+    const rankBadge = i === 0 ? 
+        '<span class="badge bg-warning text-dark" style="padding: 0.5rem 0.8rem; font-size: 0.9rem; font-weight: 600;">#1</span>' :
+        `<span class="badge bg-secondary" style="padding: 0.5rem 0.8rem; font-size: 0.9rem;">#${i+1}</span>`;
+    
+    const savingsClass = rec.cost_savings > 0 ? 'text-success' : 'text-danger';
+    const savingsIcon = rec.cost_savings > 0 ? '↓' : '↑';
+    
+    const co2Class = rec.co2_reduction > 0 ? 'text-success' : 'text-danger';
+    const co2Icon = rec.co2_reduction > 0 ? '↓' : '↑';
+    
+    const rowStyle = i === 0 ? 'background: #f8f9fa;' : '';
+    
+    html += `
+        <tr style="${rowStyle}">
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rankBadge}</td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                <span class="text-capitalize">${rec.material}</span>
+            </td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;" class="text-capitalize">${rec.shape}</td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rec.strength}</td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                <span class="fw-semibold">₹${formatValue(rec.predicted_cost, '')}</span>
+            </td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                <span class="${savingsClass} fw-semibold">${savingsIcon} ₹${Math.abs(rec.cost_savings).toFixed(2)}</span>
+            </td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                <span class="fw-semibold">${formatValue(rec.predicted_co2, '')}</span>
+            </td>
+            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                <span class="${co2Class} fw-semibold">${co2Icon} ${Math.abs(rec.co2_reduction).toFixed(2)}</span>
+            </td>
+        </tr>
+    `;
+});
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-center bg-light" style="padding: 1rem; border-top: 2px solid var(--burlywood);">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    All costs and CO₂ scores are ML-predicted values based on your input specifications
+                </small>
+            </div>
+        </div>
+
+        <!-- Comparison Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #fff 0%, #f0fff4 100%); border: none; padding: 1.5rem 2rem; border-bottom: 3px solid var(--asparagus);">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-bar-chart-fill text-success"></i> Cost Comparison Analysis</h5>
+                        <small class="text-muted">Lower is better • Visual comparison across alternatives</small>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <canvas id="recCostChart" height="280"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%); border: none; padding: 1.5rem 2rem; border-bottom: 3px solid var(--charcoal);">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-cloud-fill text-primary"></i> CO₂ Impact Comparison</h5>
+                        <small class="text-muted">Lower is better • Environmental impact analysis</small>
+                    </div>
+                    <div class="card-body" style="padding: 1.5rem;">
+                        <canvas id="recCO2Chart" height="280"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('recResults').innerHTML = html;
+    document.getElementById('recResults').classList.remove('hidden');
+    
+    // Render charts
+    setTimeout(() => renderRecCharts(chartData), 100);
+}
+
+// FIX #3: Render comparison charts in recommendation section
+function renderRecCharts(data) {
+    const costCtx = document.getElementById('recCostChart');
+    const co2Ctx = document.getElementById('recCO2Chart');
+    
+    if (!costCtx || !co2Ctx) return;
+    
+    // Destroy existing charts if any
+    if (charts.recCost) charts.recCost.destroy();
+    if (charts.recCO2) charts.recCO2.destroy();
+    
+    // Professional industrial color palette (Tableau-style)
+    const industrialColors = [
+        '#1F77B4',  // Professional Blue
+        '#FF7F0E',  // Professional Orange
+        '#2CA02C',  // Professional Green
+        '#D62728',  // Professional Red
+        '#9467BD',  // Professional Purple
+        '#8C564B',  // Professional Brown
+        '#E377C2',  // Professional Pink
+        '#17BECF'   // Professional Cyan
+    ];
+    
+    const currentColor = '#525252';  // Professional Gray for baseline
+    
+    // Cost chart
+    charts.recCost = new Chart(costCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Cost (₹)',
+                data: data.costs,
+                backgroundColor: data.costs.map((val, i) => 
+                    i === 0 ? currentColor : industrialColors[(i-1) % industrialColors.length]
+                ),
+                borderWidth: 0,
+                borderRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    backgroundColor: '#1F2937',
+                    padding: 14,
+                    cornerRadius: 6,
+                    titleFont: { size: 14, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 13, family: 'Inter' },
+                    borderColor: '#E5E7EB',
+                    borderWidth: 1,
+                    displayColors: true,
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    callbacks: {
+                        label: (context) => `Cost: ₹${context.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Cost (₹)',
+                        font: { size: 12, weight: '600', family: 'Inter' },
+                        color: '#374151',
+                        padding: { top: 0, bottom: 10 }
+                    },
+                    ticks: {
+                        callback: (value) => '₹' + value.toFixed(0),
+                        font: { size: 11, family: 'Inter' },
+                        color: '#6B7280',
+                        padding: 8
+                    },
+                    grid: { 
+                        color: '#F3F4F6',
+                        drawBorder: false,
+                        lineWidth: 1
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { 
+                        font: { size: 11, weight: '500', family: 'Inter' },
+                        color: '#374151',
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // CO2 chart
+    charts.recCO2 = new Chart(co2Ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'CO₂ Impact Score',
+                data: data.co2s,
+                backgroundColor: data.co2s.map((val, i) => 
+                    i === 0 ? currentColor : industrialColors[(i-1) % industrialColors.length]
+                ),
+                borderWidth: 0,
+                borderRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    display: false 
+                },
+                tooltip: {
+                    backgroundColor: '#1F2937',
+                    padding: 14,
+                    cornerRadius: 6,
+                    titleFont: { size: 14, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 13, family: 'Inter' },
+                    borderColor: '#E5E7EB',
+                    borderWidth: 1,
+                    displayColors: true,
+                    boxWidth: 12,
+                    boxHeight: 12,
+                    callbacks: {
+                        label: (context) => `CO₂ Score: ${context.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'CO₂ Impact Score',
+                        font: { size: 12, weight: '600', family: 'Inter' },
+                        color: '#374151',
+                        padding: { top: 0, bottom: 10 }
+                    },
+                    ticks: {
+                        font: { size: 11, family: 'Inter' },
+                        color: '#6B7280',
+                        padding: 8
+                    },
+                    grid: { 
+                        color: '#F3F4F6',
+                        drawBorder: false,
+                        lineWidth: 1
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { 
+                        font: { size: 11, weight: '500', family: 'Inter' },
+                        color: '#374151',
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Render comparison charts
+function renderCompCharts(comparisons) {
+    const costCtx = document.getElementById('compCostChart');
+    const co2Ctx = document.getElementById('compCO2Chart');
+    
+    if (!costCtx || !co2Ctx) return;
+    
+    // Destroy existing charts if any
+    if (charts.compCost) charts.compCost.destroy();
+    if (charts.compCO2) charts.compCO2.destroy();
+    
+    const labels = comparisons.map(c => c.material.toUpperCase());
+    const costs = comparisons.map(c => c.cost);
+    const co2s = comparisons.map(c => c.co2);
+    
+    // Professional industrial colors
+    const industrialColors = [
+        '#1F77B4',  // Professional Blue
+        '#FF7F0E',  // Professional Orange
+        '#2CA02C',  // Professional Green
+        '#D62728',  // Professional Red
+        '#9467BD',  // Professional Purple
+        '#8C564B',  // Professional Brown
+        '#E377C2',  // Professional Pink
+        '#17BECF'   // Professional Cyan
+    ];
+    
+    // Cost chart - Horizontal bar
+    charts.compCost = new Chart(costCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Predicted Cost (₹)',
+                data: costs,
+                backgroundColor: costs.map((val, idx) => industrialColors[idx % industrialColors.length]),
+                borderWidth: 0,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1F2937',
+                    padding: 14,
+                    cornerRadius: 6,
+                    titleFont: { size: 14, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 13, family: 'Inter' },
+                    borderColor: '#E5E7EB',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: (context) => `Cost: ₹${context.parsed.x.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'Cost (₹)',
+                        font: { weight: '600', size: 12, family: 'Inter' },
+                        color: '#374151',
+                        padding: { top: 10, bottom: 0 }
+                    },
+                    grid: { 
+                        color: '#F3F4F6',
+                        drawBorder: false,
+                        lineWidth: 1
+                    },
+                    ticks: {
+                        color: '#6B7280',
+                        font: { size: 11, family: 'Inter' },
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#374151',
+                        font: { weight: '600', size: 11, family: 'Inter' },
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // CO2 chart - Horizontal bar
+    charts.compCO2 = new Chart(co2Ctx.getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CO₂ Impact Score',
+                data: co2s,
+                backgroundColor: co2s.map((val, idx) => industrialColors[idx % industrialColors.length]),
+                borderWidth: 0,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1F2937',
+                    padding: 14,
+                    cornerRadius: 6,
+                    titleFont: { size: 14, weight: '600', family: 'Inter' },
+                    bodyFont: { size: 13, family: 'Inter' },
+                    borderColor: '#E5E7EB',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: (context) => `CO₂ Score: ${context.parsed.x.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: { 
+                        display: true, 
+                        text: 'CO₂ Impact Score',
+                        font: { weight: '600', size: 12, family: 'Inter' },
+                        color: '#374151',
+                        padding: { top: 10, bottom: 0 }
+                    },
+                    grid: { 
+                        color: '#F3F4F6',
+                        drawBorder: false,
+                        lineWidth: 1
+                    },
+                    ticks: {
+                        color: '#6B7280',
+                        font: { size: 11, family: 'Inter' },
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#374151',
+                        font: { weight: '600', size: 11, family: 'Inter' },
+                        padding: 8
+                    },
+                    border: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function displayComp(data, inputData) {
+    const comparisons = data.comparisons;
+    
+    // Sort by cost (ascending)
+    const sortedByPrice = [...comparisons].sort((a, b) => a.cost - b.cost);
+    const cheapest = sortedByPrice[0];
+    
+    // Sort by CO2 (ascending)
+    const sortedByCO2 = [...comparisons].sort((a, b) => a.co2 - b.co2);
+    const greenest = sortedByCO2[0];
+    
+    // Find best overall (lowest cost + lowest CO2)
+    const withScores = comparisons.map(c => ({
+        ...c,
+        overallScore: (c.cost / Math.max(...comparisons.map(x => x.cost))) + 
+                      (c.co2 / Math.max(...comparisons.map(x => x.co2)))
+    }));
+    const bestOverall = withScores.sort((a, b) => a.overallScore - b.overallScore)[0];
+    
+    let html = `
+        <!-- Key Insights Section -->
+        <div class="card mt-4 mb-4 fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 25px rgba(105, 153, 93, 0.15); overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, var(--asparagus) 0%, #7daf6d 100%); color: white; padding: 1.5rem 2rem; border: none;">
+                <h4 class="mb-1 fw-bold"><i class="bi bi-lightbulb-fill me-2"></i>Key Insights & Recommendations</h4>
+                <small class="opacity-75">Analysis of ${comparisons.length} material alternatives</small>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="text-center p-4" style="background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%); border-radius: 16px; box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);">
+                            <i class="bi bi-trophy-fill" style="font-size: 3rem; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);"></i>
+                            <h5 class="fw-bold mt-3 mb-2" style="color: #333;">Best Overall</h5>
+                            <h3 class="fw-bold text-uppercase mb-2" style="color: #333;">${bestOverall.material}</h3>
+                            <p class="mb-1" style="color: #555;"><strong>Cost:</strong> ₹${bestOverall.cost.toFixed(2)}</p>
+                            <p class="mb-0" style="color: #555;"><strong>CO₂:</strong> ${bestOverall.co2.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-4" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 16px; color: white; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                            <i class="bi bi-currency-rupee" style="font-size: 3rem;"></i>
+                            <h5 class="fw-bold mt-3 mb-2">Most Economical</h5>
+                            <h3 class="fw-bold text-uppercase mb-2">${cheapest.material}</h3>
+                            <p class="mb-1"><strong>Cost:</strong> ₹${cheapest.cost.toFixed(2)}</p>
+                            <p class="mb-0"><strong>Savings vs Highest:</strong> ₹${(Math.max(...comparisons.map(c => c.cost)) - cheapest.cost).toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-4" style="background: linear-gradient(135deg, #198754 0%, #20c997 100%); border-radius: 16px; color: white; box-shadow: 0 4px 12px rgba(25, 135, 84, 0.3);">
+                            <i class="bi bi-tree-fill" style="font-size: 3rem;"></i>
+                            <h5 class="fw-bold mt-3 mb-2">Most Sustainable</h5>
+                            <h3 class="fw-bold text-uppercase mb-2">${greenest.material}</h3>
+                            <p class="mb-1"><strong>CO₂ Score:</strong> ${greenest.co2.toFixed(2)}</p>
+                            <p class="mb-0"><strong>Reduction vs Highest:</strong> ${(Math.max(...comparisons.map(c => c.co2)) - greenest.co2).toFixed(2)}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Comparison Table -->
+        <div class="card mb-4 fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <div class="card-header" style="background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border-bottom: 3px solid var(--burlywood); padding: 1.5rem 2rem;">
+                <h4 class="mb-1 fw-bold"><i class="bi bi-table me-2"></i>Side-by-Side Comparison</h4>
+                <small class="text-muted">Detailed metrics for ${comparisons.length} materials • Shape: ${inputData.shape} • Weight: ${inputData.weight_measured}g</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="border-collapse: separate; border-spacing: 0;">
+                        <thead style="background: var(--misty-grey); position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Material</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Predicted Cost</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Cost Rank</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">CO₂ Score</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Environmental Rank</th>
+                                <th style="padding: 1rem 1.5rem; border: none; font-weight: 700;">Overall Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    // Sort comparisons by overall score for display
+    const displayComparisons = [...withScores].sort((a, b) => a.overallScore - b.overallScore);
+    
+    displayComparisons.forEach((c, idx) => {
+        const costRank = sortedByPrice.findIndex(x => x.material === c.material) + 1;
+        const co2Rank = sortedByCO2.findIndex(x => x.material === c.material) + 1;
+        const isBest = c.material === bestOverall.material;
+        const rowStyle = isBest ? 'background: linear-gradient(to right, rgba(255, 215, 0, 0.15) 0%, transparent 100%);' : '';
+        
+        // Calculate star rating (5 stars max, inverted from overall score)
+        const minScore = Math.min(...withScores.map(x => x.overallScore));
+        const maxScore = Math.max(...withScores.map(x => x.overallScore));
+        const scoreRange = maxScore - minScore;
+
+        // Normalize: best (min) score = 5 stars, worst (max) score = 1 star
+        let stars;
+        if (scoreRange === 0) {
+            stars = 5; // All same score = all get 5 stars
+        } else {
+            const normalizedScore = 1 - ((c.overallScore - minScore) / scoreRange);
+            stars = Math.max(1, Math.round(normalizedScore * 5)); // Ensure at least 1 star
+        }
+        const starDisplay = '⭐'.repeat(stars) + '☆'.repeat(5 - stars);
+                
+        html += `
+            <tr style="${rowStyle}">
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-uppercase" style="font-size: 1.1rem;">${c.material}</span>
+                        ${isBest ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-trophy-fill"></i> BEST</span>' : ''}
+                    </div>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="fw-bold fs-5" style="color: var(--charcoal);">₹${c.cost.toFixed(2)}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="badge ${costRank === 1 ? 'bg-success' : costRank === comparisons.length ? 'bg-danger' : 'bg-secondary'}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                        #${costRank} ${costRank === 1 ? 'Cheapest' : ''}
+                    </span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="fw-bold fs-5" style="color: var(--asparagus);">${c.co2.toFixed(2)}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="badge ${co2Rank === 1 ? 'bg-success' : co2Rank === comparisons.length ? 'bg-danger' : 'bg-secondary'}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                        #${co2Rank} ${co2Rank === 1 ? 'Greenest' : ''}
+                    </span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span style="font-size: 1.3rem;">${starDisplay}</span>
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual Comparison Charts -->
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #fff 0%, #fff7ed 100%); border-bottom: 3px solid var(--melon); padding: 1.5rem 2rem;">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-bar-chart-fill text-warning"></i> Cost Comparison</h5>
+                        <small class="text-muted">Lower values indicate better pricing</small>
+                    </div>
+                    <div class="card-body" style="padding: 2rem;">
+                        <canvas id="compCostChart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #fff 0%, #f0fff4 100%); border-bottom: 3px solid var(--asparagus); padding: 1.5rem 2rem;">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-cloud-fill text-success"></i> Environmental Impact</h5>
+                        <small class="text-muted">Lower CO₂ scores are more sustainable</small>
+                    </div>
+                    <div class="card-body" style="padding: 2rem;">
+                        <canvas id="compCO2Chart" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Material Properties Breakdown -->
+        <div class="card fade-in" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+            <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
+                <h4 class="mb-0 fw-semibold" style="color: var(--charcoal);"><i class="bi bi-info-circle-fill me-2" style="color: var(--asparagus);"></i>Material Insights</h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+    `;
+    
+    // Add material insight cards
+    const materialInsights = {
+        'aluminium': { icon: 'bi-box', strength: 'High', recyclability: 'Excellent', note: 'Lightweight and infinitely recyclable' },
+        'cardboard': { icon: 'bi-box-seam', strength: 'Medium', recyclability: 'Good', note: 'Biodegradable and cost-effective' },
+        'glass': { icon: 'bi-cup-straw', strength: 'High', recyclability: 'Excellent', note: 'Premium feel, heavy weight' },
+        'metal': { icon: 'bi-gear', strength: 'Very High', recyclability: 'Excellent', note: 'Durable but higher cost' },
+        'paper': { icon: 'bi-file-earmark-text', strength: 'Low', recyclability: 'Good', note: 'Economical but less protective' },
+        'plastic': { icon: 'bi-droplet', strength: 'Medium', recyclability: 'Variable', note: 'Versatile but environmental concerns' },
+        'plastic 7': { icon: 'bi-recycle', strength: 'Medium', recyclability: 'Low', note: 'Mixed plastics, harder to recycle' },
+        'steel': { icon: 'bi-nut', strength: 'Very High', recyclability: 'Excellent', note: 'Strong but heavy and costly' }
+    };
+    
+    comparisons.forEach(c => {
+        const insight = materialInsights[c.material] || materialInsights['unknown'];
+        html += `
+            <div class="col-md-${12 / Math.min(comparisons.length, 4)}">
+                <div class="text-center p-3" style="background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; transition: all 0.2s ease;">
+                    <i class="bi ${insight.icon}" style="font-size: 2.5rem; color: var(--asparagus); margin-bottom: 0.5rem;"></i>
+                    <h6 class="fw-bold text-uppercase mb-2" style="color: var(--charcoal);">${c.material}</h6>
+                    <p class="mb-1 small" style="color: #374151;"><strong>Strength:</strong> ${insight.strength}</p>
+                    <p class="mb-1 small" style="color: #374151;"><strong>Recyclability:</strong> ${insight.recyclability}</p>
+                    <p class="mb-0 small text-muted">${insight.note}</p>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('compResults').innerHTML = html;
+    document.getElementById('compResults').classList.remove('hidden');
+    
+    // Render comparison charts
+    setTimeout(() => renderCompCharts(comparisons), 100);
+}
+
+function displayBulk(data) {
+    bulkResultsData = data.results || [];
+    
+    const successCount = bulkResultsData.filter(r => r.status === 'success').length;
+    const errorCount = bulkResultsData.filter(r => r.status === 'error').length;
+    
+    let html = `
+        <div class="alert ${errorCount > 0 ? 'alert-warning' : 'alert-success'} fade-in" style="border-radius: 12px; border: 2px solid ${errorCount > 0 ? '#ffc107' : '#28a745'};">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">
+                        <i class="bi ${errorCount > 0 ? 'bi-exclamation-circle-fill' : 'bi-check-circle-fill'} me-2"></i>
+                        Processing Complete
+                    </h5>
+                    <p class="mb-0">
+                        <strong>Total:</strong> ${data.total_rows} | 
+                        <strong class="text-success">Success:</strong> ${successCount} | 
+                        <strong class="text-danger">Failed:</strong> ${errorCount}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table class="table table-hover mb-0" style="border: 1px solid #e9ecef;">
+                <thead style="background: var(--misty-grey); position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th style="padding: 1rem; border: none; font-weight: 700; white-space: nowrap;">Row</th>
+                        <th style="padding: 1rem; border: none; font-weight: 700; white-space: nowrap;">Material</th>
+                        <th style="padding: 1rem; border: none; font-weight: 700; white-space: nowrap;">Predicted Cost</th>
+                        <th style="padding: 1rem; border: none; font-weight: 700; white-space: nowrap;">Predicted CO₂</th>
+                        <th style="padding: 1rem; border: none; font-weight: 700; white-space: nowrap;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    bulkResultsData.forEach(r => {
+        const isError = r.status === 'error';
+        const rowClass = isError ? 'table-danger' : '';
+        
+        html += `
+            <tr class="${rowClass}">
+                <td style="padding: 1rem; border-top: 1px solid #e9ecef;">${r.row || '-'}</td>
+                <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
+                    <span class="text-capitalize fw-semibold">${r.material || '-'}</span>
+                </td>
+                <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
+                    ${isError ? '<span class="text-muted">-</span>' : `<span class="fw-bold text-success">₹${parseFloat(r.cost || 0).toFixed(2)}</span>`}
+                </td>
+                <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
+                    ${isError ? '<span class="text-muted">-</span>' : `<span class="fw-bold" style="color: var(--asparagus);">${parseFloat(r.co2 || 0).toFixed(2)}</span>`}
+                </td>
+                <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
+                    <span class="badge ${r.status === 'success' ? 'bg-success' : 'bg-danger'}" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        ${r.status === 'success' ? '✓ Success' : '✗ Failed'}
+                    </span>
+                    ${r.error ? `<br><small class="text-danger mt-1 d-block">${r.error}</small>` : ''}
+                </td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    document.getElementById('bulkResults').innerHTML = html;
+    document.getElementById('bulkResults').classList.remove('hidden');
+    document.getElementById('bulkDownload').classList.remove('hidden');
+}
+
+// ============================================================================
+// FIX #4: Fixed History Loading
+// ============================================================================
+async function loadHistory() {
+    try {
+        const res = await fetch(`${API}/analytics/user`, {
+            credentials: 'include'
+        });
+        
+        if (handleAuthError(res)) {
+            document.getElementById('historyList').innerHTML = 
+                '<p class="text-danger text-center py-5">Session expired. Please log in again.</p>';
+            return;
+        }
+        
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        let html = '';
+        
+        if (data.recent && data.recent.length > 0) {
+            data.recent.forEach((h, index) => {
+                const date = new Date(h.created_at);
+                const formattedDate = date.toLocaleDateString('en-IN', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric'
+                });
+                const formattedTime = date.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const costSavings = parseFloat(h.cost_savings || 0);
+                const co2Reduction = parseFloat(h.co2_reduction || 0);
+                
+                // Determine if it's a saving or increase
+                const isCostSaving = costSavings >= 0;
+                const isCO2Reduction = co2Reduction >= 0;
+                
+                // Calculate days ago
+                const daysAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+                const timeAgo = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`;
+                
+                html += `
+                    <div class="history-item fade-in" style="animation-delay: ${index * 0.05}s; border: 2px solid #e9ecef; margin-bottom: 1.5rem; border-radius: 16px; overflow: hidden; transition: all 0.3s ease;">
+                        <div class="row g-0">
+                            <!-- Left: Date & Time Badge -->
+                            <div class="col-md-2 col-lg-1" style="background: linear-gradient(135deg, var(--stat-purple) 0%, var(--stat-purple-dark) 100%); color: white;
+                                <div style="font-size: 2rem; font-weight: 800; line-height: 1;">${date.getDate()}</div>
+                                <div style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; opacity: 0.9;">${date.toLocaleDateString('en-IN', { month: 'short' })}</div>
+                                <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">${date.getFullYear()}</div>
+                                <hr style="width: 80%; border-color: rgba(255,255,255,0.3); margin: 0.75rem 0;">
+                                <div style="font-size: 0.8rem; opacity: 0.9;">
+                                    <i class="bi bi-clock"></i> ${formattedTime}
+                                </div>
+                            </div>
+                            
+                            <!-- Middle: Details -->
+                            <div class="col-md-6" style="padding: 1.5rem 2rem; background: white;">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold" style="color: var(--charcoal); font-size: 1.1rem;">
+                                            <i class="bi bi-box-seam-fill me-2" style="color: var(--asparagus);"></i>
+                                            Recommendation #${h.id}
+                                        </h6>
+                                        <p class="mb-0 text-muted small">
+                                            <i class="bi bi-calendar3"></i> ${timeAgo} • ${formattedDate}
+                                        </p>
+                                    </div>
+                                    <span class="badge bg-light text-dark border" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">
+                                        <i class="bi bi-check-circle-fill text-success me-1"></i> Completed
+                                    </span>
+                                </div>
+                                
+                                <div class="mt-3" style="border-top: 1px solid #f0f0f0; padding-top: 1rem;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isCostSaving ? '#28a745' : '#dc3545'};"></div>
+                                                <span class="small text-muted">Cost Impact</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isCO2Reduction ? '#28a745' : '#dc3545'};"></div>
+                                                <span class="small text-muted">CO₂ Impact</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: Metrics -->
+                            <div class="col-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 1.5rem 2rem; border-left: 3px solid var(--burlywood);">
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-muted small fw-semibold" style="text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <i class="bi bi-currency-rupee"></i> Cost Savings
+                                        </span>
+                                        ${isCostSaving ? 
+                                            '<span class="badge" style="background: #DBEAFE; color: #0EA5E9; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">SAVED</span>' : 
+                                            '<span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">INCREASE</span>'
+                                        }
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <h4 class="mb-0 fw-bold" style="font-size: 1.75rem; color: ${isCostSaving ? 'var(--stat-blue)' : '#DC2626'};">
+                                            ${isCostSaving ? '' : ''}₹${Math.abs(costSavings).toFixed(2)}
+                                        </h4>
+                                        <span class="small text-muted">${isCostSaving ? 'saved' : 'increased'}</span>
+                                    </div>
+                                    ${!isCostSaving ? '<small class="text-muted d-block mt-1">Higher cost alternative selected</small>' : ''}
+                                </div>
+                                
+                                <hr style="border-color: #dee2e6; opacity: 0.5; margin: 1rem 0;">
+                                
+                                <div>
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="text-muted small fw-semibold" style="text-transform: uppercase; letter-spacing: 0.5px;">
+                                            <i class="bi bi-cloud-fill"></i> CO₂ Impact
+                                        </span>
+                                        ${isCO2Reduction ? 
+                                            '<span class="badge" style="background: #D1FAE5; color: #10B981; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">REDUCED</span>' : 
+                                            '<span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">INCREASED</span>'
+                                        }
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2">
+                                        <h4 class="mb-0 fw-bold" style="font-size: 1.75rem; color: ${isCO2Reduction ? 'var(--stat-green)' : '#DC2626'};">
+                                            ${isCO2Reduction ? '' : ''}${Math.abs(co2Reduction).toFixed(2)}
+                                        </h4>
+                                        <span class="small text-muted">score ${isCO2Reduction ? 'reduction' : 'increase'}</span>
+                                    </div>
+                                    ${!isCO2Reduction ? '<small class="text-muted d-block mt-1">Higher impact alternative</small>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            html = `
+                <div class="text-center py-5" style="background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+                    <div style="font-size: 5rem; color: #e9ecef; margin-bottom: 1rem;">
+                        <i class="bi bi-inbox"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2" style="color: var(--charcoal);">No Recommendation History Yet</h5>
+                    <p class="text-muted mb-4">Start by getting your first packaging recommendation to see your impact history here.</p>
+                    <button class="btn btn-primary" onclick="showSection(event, 'recommendation')" style="padding: 0.75rem 2rem;">
+                        <i class="bi bi-plus-circle me-2"></i> Get Your First Recommendation
+                    </button>
+                </div>
+            `;
+        }
+        
+        document.getElementById('historyList').innerHTML = html;
+    } catch (e) {
+        console.error('History error:', e);
+        document.getElementById('historyList').innerHTML = `
+            <div class="alert alert-danger" style="border-radius: 16px; border: 2px solid #dc3545;">
+                <div class="d-flex align-items-start gap-3">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; color: #dc3545;"></i>
+                    <div>
+                        <h5 class="mb-2">Error Loading History</h5>
+                        <p class="mb-1"><strong>Message:</strong> ${e.message}</p>
+                        <hr style="border-color: rgba(220, 53, 69, 0.2);">
+                        <small class="text-muted">
+                            Please try refreshing the page or contact support if the issue persists.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function loadCharts() {
+    const ctx1 = document.getElementById('costChart');
+    const ctx2 = document.getElementById('co2Chart');
+    
+    if (!ctx1 || !ctx2) return;
+    
+    if (charts.cost) charts.cost.destroy();
+    if (charts.co2) charts.co2.destroy();
+    
+    try {
+        const res = await fetch(`${API}/analytics/user`, {
+            credentials: 'include'
+        });
+        
+        if (handleAuthError(res)) return;
+        
+        const data = await res.json();
+        const recentData = (data.recent || []).slice(0, 10).reverse();
+        
+        const labels = recentData.map((_, i) => `Rec ${i + 1}`);
+        const costData = recentData.map(r => Math.abs(parseFloat(r.cost_savings) || 0));
+        const co2Data = recentData.map(r => Math.abs(parseFloat(r.co2_reduction) || 0));
+        
+        // Use fallback data if no real data
+        const finalLabels = labels.length > 0 ? labels : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        const finalCostData = costData.length > 0 ? costData : [100, 250, 400, 600];
+        const finalCo2Data = co2Data.length > 0 ? co2Data : [10, 25, 40, 60];
+        
+        // Calculate analytics metrics
+        const totalCost = finalCostData.reduce((a, b) => a + b, 0);
+        const avgCost = totalCost / finalCostData.length;
+        const totalCO2 = finalCo2Data.reduce((a, b) => a + b, 0);
+        const avgCO2 = totalCO2 / finalCo2Data.length;
+        const bestSaving = Math.max(...finalCostData);
+        const bestSavingIndex = finalCostData.indexOf(bestSaving);
+        const bestCO2Index = finalCo2Data.indexOf(Math.max(...finalCo2Data));
+        
+        // Update summary cards
+        document.getElementById('analyticsAvgSavings').textContent = `₹${avgCost.toFixed(2)}`;
+        document.getElementById('analyticsAvgCO2').textContent = avgCO2.toFixed(2);
+        document.getElementById('analyticsThisMonth').textContent = recentData.length || 4;
+        document.getElementById('analyticsBestSaving').textContent = `₹${bestSaving.toFixed(2)}`;
+        
+        // Update chart footers
+        document.getElementById('costChartTotal').textContent = `₹${totalCost.toFixed(2)}`;
+        document.getElementById('costChartBest').textContent = finalLabels[bestSavingIndex];
+        document.getElementById('co2ChartTotal').textContent = totalCO2.toFixed(2);
+        document.getElementById('co2ChartBest').textContent = finalLabels[bestCO2Index];
+        
+        // Generate insights
+        generateInsights(finalCostData, finalCo2Data, recentData.length || 4);
+        
+        // Cost Savings Chart - Enhanced
+        charts.cost = new Chart(ctx1.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: finalLabels,
+                datasets: [{
+                    label: 'Cost Savings (₹)',
+                    data: finalCostData,
+                    borderColor: '#1F77B4',
+                    backgroundColor: 'rgba(31, 119, 180, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2.5,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#1F77B4',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#1F77B4',
+                    pointHoverBorderWidth: 2.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12, weight: '600', family: 'Inter' },
+                            padding: 15,
+                            usePointStyle: true,
+                            color: '#374151'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1F2937',
+                        padding: 14,
+                        cornerRadius: 6,
+                        titleFont: { size: 14, weight: '600', family: 'Inter' },
+                        bodyFont: { size: 13, family: 'Inter' },
+                        borderColor: '#E5E7EB',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (context) => `Savings: ₹${context.parsed.y.toFixed(2)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'Cost Savings (₹)',
+                            font: { size: 12, weight: '600', family: 'Inter' },
+                            color: '#374151',
+                            padding: { top: 0, bottom: 10 }
+                        },
+                        ticks: {
+                            callback: (value) => '₹' + value.toFixed(0),
+                            font: { size: 11, family: 'Inter' },
+                            color: '#6B7280',
+                            padding: 8
+                        },
+                        grid: { 
+                            color: '#F3F4F6',
+                            drawBorder: false
+                        },
+                        border: {
+                            display: false
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { 
+                            font: { size: 11, family: 'Inter' },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+
+        // CO2 Reduction Chart - Enhanced
+        charts.co2 = new Chart(ctx2.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: finalLabels,
+                datasets: [{
+                    label: 'CO₂ Reduction',
+                    data: finalCo2Data,
+                    borderColor: '#2CA02C',
+                    backgroundColor: 'rgba(44, 160, 44, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2.5,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#2CA02C',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#2CA02C',
+                    pointHoverBorderWidth: 2.5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 12, weight: '600', family: 'Inter' },
+                            padding: 15,
+                            usePointStyle: true,
+                            color: '#374151'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1F2937',
+                        padding: 14,
+                        cornerRadius: 6,
+                        titleFont: { size: 14, weight: '600', family: 'Inter' },
+                        bodyFont: { size: 13, family: 'Inter' },
+                        borderColor: '#E5E7EB',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (context) => `CO₂ Reduction: ${context.parsed.y.toFixed(2)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { 
+                            display: true, 
+                            text: 'CO₂ Impact Score',
+                            font: { size: 12, weight: '600', family: 'Inter' },
+                            color: '#374151',
+                            padding: { top: 0, bottom: 10 }
+                        },
+                        ticks: {
+                            font: { size: 11, family: 'Inter' },
+                            color: '#6B7280',
+                            padding: 8
+                        },
+                        grid: { 
+                            color: '#F3F4F6',
+                            drawBorder: false
+                        },
+                        border: {
+                            display: false
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { 
+                            font: { size: 11, family: 'Inter' },
+                            color: '#374151',
+                            padding: 8
+                        },
+                        border: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    } catch (e) {
+        console.error('Charts error:', e);
+    }
+}
+
+function generateInsights(costData, co2Data, totalRecs) {
+    const avgCost = costData.reduce((a, b) => a + b, 0) / costData.length;
+    const avgCO2 = co2Data.reduce((a, b) => a + b, 0) / co2Data.length;
+    
+    // Calculate trend (last 3 vs first 3)
+    const recentCost = costData.slice(-3).reduce((a, b) => a + b, 0) / 3;
+    const earlyCost = costData.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
+    const costTrend = recentCost > earlyCost ? 'improving' : 'declining';
+    const costTrendPercent = Math.abs(((recentCost - earlyCost) / earlyCost) * 100);
+    
+    const insights = [
+        {
+            icon: 'bi-graph-up-arrow',
+            color: costTrend === 'improving' ? 'success' : 'warning',
+            title: 'Cost Performance',
+            text: `Your savings are ${costTrend} by ${costTrendPercent.toFixed(1)}% compared to earlier recommendations.`
+        },
+        {
+            icon: 'bi-bullseye',
+            color: 'primary',
+            title: 'Optimization Rate',
+            text: `You've completed ${totalRecs} recommendations with an average saving of ₹${avgCost.toFixed(2)} each.`
+        },
+        {
+            icon: 'bi-tree-fill',
+            color: 'success',
+            title: 'Environmental Impact',
+            text: `Average CO₂ reduction of ${avgCO2.toFixed(2)} per recommendation. Keep it up!`
+        }
+    ];
+    
+    let html = '';
+    insights.forEach((insight, i) => {
+        html += `
+              <div class="col-md-4 fade-in" style="animation-delay: ${i * 0.1}s;">
+                <div class="p-4" style="background: #F9FAFB; border-radius: 12px; border-left: 4px solid var(--${insight.color === 'success' ? 'asparagus' : insight.color === 'warning' ? 'melon' : 'charcoal'}); border: 1px solid #E5E7EB; border-left: 4px solid var(--${insight.color === 'success' ? 'asparagus' : insight.color === 'warning' ? 'melon' : 'charcoal'});">
+                    <div class="d-flex align-items-start gap-3">
+                        <div style="flex-shrink: 0;">
+                            <i class="bi ${insight.icon}" style="font-size: 2rem; color: var(--${insight.color === 'success' ? 'asparagus' : insight.color === 'warning' ? 'melon' : 'charcoal'});"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-2" style="color: var(--charcoal);">${insight.title}</h6>
+                            <p class="mb-0 small text-muted">${insight.text}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    document.getElementById('analyticsInsights').innerHTML = html;
+}
+
+function logout() {
+    fetch('/api/logout', { 
+        method: 'POST',
+        credentials: 'include' 
+    }).finally(() => {
+        window.location.href = '/';
+    });
+}
+
+let bulkResultsData = [];
+
+function downloadBulkResults() {
+    if (bulkResultsData.length === 0) {
+        alert('No results to download');
+        return;
+    }
+    
+    const headers = [
+        'Row', 
+        'Material', 
+        'Shape', 
+        'Strength', 
+        'Food Product Category',
+        'Recycling',
+        'Product Qty (g)', 
+        'Package Weight (g)', 
+        'Weight Capacity (g)',
+        'Number of Units',
+        'Recyclability (%)',
+        'Predicted Cost (₹)', 
+        'Predicted CO₂ Score', 
+        'Status',
+        'Error Message'
+    ];
+    
+    const csvRows = [headers.join(',')];
+    
+    bulkResultsData.forEach(r => {
+        const row = [
+            r.row || '',
+            (r.material || '').replace(/,/g, ';'),
+            (r.shape || '').replace(/,/g, ';'),
+            (r.strength || '').replace(/,/g, ';'),
+            (r.food_group || '').replace(/,/g, ';'),
+            (r.recycling || '').replace(/,/g, ';'),
+            r.product_quantity || '',
+            r.weight_measured || '',
+            r.weight_capacity || '',
+            r.number_of_units || '',
+            r.recyclability_percent || '',
+            r.cost || '',
+            r.co2 || '',
+            r.status || '',
+            (r.error || '').replace(/,/g, ';').replace(/"/g, '""')
+        ];
+        csvRows.push(row.map(val => `"${val}"`).join(','));
+    });
+    
+    const csvContent = '\uFEFF' + csvRows.join('\n'); // Add BOM for Excel compatibility
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ecopack_results_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+    </script>     
+    <!-- Footer -->
+    <footer class="text-center py-3 mt-4" style="background: var(--white); border-top: 1px solid #e5e7eb;">
+        <small class="text-muted">
+            <i class="bi bi-box-seam me-1" style="color: var(--asparagus);"></i>
+            EcoPackAI © 2025 | Sustainable Food Packaging Intelligence
+        </small>
+    </footer>
+</body> 
+</html>
