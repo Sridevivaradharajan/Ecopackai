@@ -1423,6 +1423,65 @@ def get_user_analytics(current_user_id):
         }), 200  
     except Exception as e:  
         return jsonify({'error': str(e)}), 500  
+@app.route('/api/history', methods=['GET'])
+@token_required
+def get_user_history(current_user_id):
+    """
+    Get complete recommendation history with all recommendation details
+    """
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'Database connection failed'}), 503
+        
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Query to get all recommendations with details
+        cur.execute('''
+            SELECT 
+                id,
+                product_details,
+                current_packaging,
+                recommendations,
+                cost_savings,
+                co2_reduction,
+                created_at
+            FROM recommendations_history
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 50
+        ''', (current_user_id,))
+        
+        history_records = cur.fetchall()
+        
+        cur.close()
+        conn.close()
+        
+        # Format the response
+        result = []
+        for record in history_records:
+            # Parse JSONB fields
+            current_pkg = record['current_packaging'] if record['current_packaging'] else {}
+            recommendations = record['recommendations'] if record['recommendations'] else []
+            
+            result.append({
+                'id': record['id'],
+                'created_at': record['created_at'].isoformat() if record['created_at'] else None,
+                'cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0,
+                'co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0,
+                'current_packaging': current_pkg,
+                'recommendations': recommendations
+            })
+        
+        return jsonify({
+            'success': True,
+            'history': result,
+            'count': len(result)
+        }), 200
+        
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        return jsonify({'error': str(e)}), 500
   
 # ============================================================================  
 # CORRECTED: /api/materials - Returns ONLY fields models actually use 
