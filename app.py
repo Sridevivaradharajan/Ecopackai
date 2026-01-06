@@ -1438,7 +1438,8 @@ def get_user_analytics(current_user_id):
 @token_required
 def get_user_history(current_user_id):
     """
-    Get complete recommendation history with all recommendation details
+    Get complete recommendation history with ALL fields from database
+    Much simpler - just return the entire recommendations table
     """
     try:
         print(f"\n[History API] Request from user {current_user_id}")
@@ -1450,7 +1451,7 @@ def get_user_history(current_user_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Query to get all recommendations with details
+        # Get all recommendations with ALL fields
         cur.execute('''
             SELECT 
                 id,
@@ -1473,25 +1474,18 @@ def get_user_history(current_user_id):
         cur.close()
         conn.close()
         
-        # Format the response
+        # Format the response - convert to JSON-serializable format
         result = []
         for record in history_records:
             try:
-                # Parse JSONB fields safely
-                current_pkg = record['current_packaging'] if record['current_packaging'] else {}
-                recommendations = record['recommendations'] if record['recommendations'] else []
-                
-                # Ensure numeric values are properly converted
-                cost_savings = float(record['cost_savings']) if record['cost_savings'] else 0.0
-                co2_reduction = float(record['co2_reduction']) if record['co2_reduction'] else 0.0
-                
                 result.append({
                     'id': record['id'],
                     'created_at': record['created_at'].isoformat() if record['created_at'] else None,
-                    'cost_savings': cost_savings,
-                    'co2_reduction': co2_reduction,
-                    'current_packaging': current_pkg,
-                    'recommendations': recommendations
+                    'cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0.0,
+                    'co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0.0,
+                    'current_packaging': record['current_packaging'] if record['current_packaging'] else {},
+                    'product_details': record['product_details'] if record['product_details'] else {},
+                    'recommendations': record['recommendations'] if record['recommendations'] else []
                 })
             except Exception as e:
                 print(f"[History API] Error processing record {record.get('id')}: {e}")
@@ -1515,12 +1509,7 @@ def get_user_history(current_user_id):
 # ============================================================================  
   
 @app.route('/api/materials', methods=['GET'])  
-def get_materials():  
-    """  
-    Return actual categories from label encoders  
-    ✅ ONLY return the 6 fields that models actually use 
-    ❌ REMOVED: categories_tags, countries_tags (not in feature files) 
-    """  
+def get_materials(): 
     try:  
         # Define ONLY the 6 categorical fields used by models 
         REQUIRED_FIELDS = ['material', 'parent_material', 'shape', 'strength', 'food_group', 'recycling'] 
