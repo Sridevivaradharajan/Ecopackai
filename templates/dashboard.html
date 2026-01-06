@@ -362,6 +362,177 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 24px rgba(0,0,0,0.12);
         }
+
+        .stat-card-compact {
+            border: none;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+
+        .stat-card-compact:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .stat-card-compact .card-body {
+            padding: 1.25rem;
+        }
+
+        .stat-icon-compact {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .stat-value-compact {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0.5rem 0 0.25rem 0;
+        }
+
+        .stat-label-compact {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6B7280;
+            margin: 0;
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .stat-change.positive {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .stat-change.negative {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* BI DASHBOARD ENHANCEMENTS */
+        .bi-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            background: white;
+            overflow: hidden;
+        }
+
+        .bi-card-header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-bottom: 2px solid #e9ecef;
+            padding: 1.25rem 1.5rem;
+        }
+
+        .bi-metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .bi-metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .bi-metric-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.75rem;
+        }
+
+        .bi-metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+        }
+
+        .bi-metric-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .trend-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .trend-up {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .trend-down {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .chart-container-enhanced {
+            position: relative;
+            height: 300px;
+            padding: 1rem;
+        }
+
+        .chart-legend-custom {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
     </style> 
 </head> 
 <body> 
@@ -424,45 +595,85 @@
  
                 <!-- RECOMMENDATION SECTION --> 
                 <div id="recommendationSection" class="section">
-                    <!-- Stats Cards --> 
-                <div class="row mb-4"> 
-                    <div class="col-md-3 mb-3"> 
-                        <div class="card stat-card recommendations">
-                            <div class="card-body text-center"> 
-                                <i class="bi bi-box-seam-fill metric-icon"></i> 
-                                <h3 id="totalRecs">0</h3> 
-                                <p class="mb-0 fs-5 fw-semibold">Recommendations</p> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    <div class="col-md-3 mb-3"> 
-                        <div class="card stat-card cost-savings">
-                            <div class="card-body text-center"> 
-                                <i class="bi bi-currency-rupee metric-icon"></i> 
-                                <h3 id="totalCost">₹0</h3> 
-                                <p class="mb-0 fs-5 fw-semibold">Cost Savings</p> 
-                            </div> 
-                        </div> 
-                    </div> 
-                    <div class="col-md-3 mb-3"> 
-                        <div class="card stat-card co2-impact">
-                            <div class="card-body text-center"> 
-                                <i class="bi bi-cloud-fill metric-icon"></i> 
-                                <h3 id="totalCO2">0</h3> 
-                                <p class="mb-0 fs-5 fw-semibold">CO₂ Impact Score</p> 
-                            </div> 
-                        </div> 
+
+                <!-- ENHANCED COMPACT KPI CARDS -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card-compact">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="stat-icon-compact" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);">
+                                        <i class="bi bi-box-seam-fill" style="color: #6366F1;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="stat-label-compact">Total Recommendations</p>
+                                        <h3 class="stat-value-compact" id="totalRecs" style="color: #1F2937;">0</h3>
+                                        <span class="stat-change positive">
+                                            <i class="bi bi-arrow-up-short"></i> Active
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-3 mb-3"> 
-                        <div class="card stat-card sustainability">
-                            <div class="card-body text-center"> 
-                                <i class="bi bi-recycle metric-icon"></i> 
-                                <h3>95%</h3> 
-                                <p class="mb-0 fs-5 fw-semibold">Sustainability</p> 
-                            </div> 
-                        </div> 
-                    </div> 
-                </div> 
+                    
+                    <div class="col-md-3">
+                        <div class="card stat-card-compact">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="stat-icon-compact" style="background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);">
+                                        <i class="bi bi-currency-rupee" style="color: #0EA5E9;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="stat-label-compact">Cost Savings</p>
+                                        <h3 class="stat-value-compact" id="totalCost" style="color: #1F2937;">₹0</h3>
+                                        <span class="stat-change positive" id="costTrend">
+                                            <i class="bi bi-arrow-down-short"></i> Optimized
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card stat-card-compact">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="stat-icon-compact" style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);">
+                                        <i class="bi bi-cloud-fill" style="color: #22C55E;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="stat-label-compact">CO₂ Impact</p>
+                                        <h3 class="stat-value-compact" id="totalCO2" style="color: #1F2937;">0</h3>
+                                        <span class="stat-change positive" id="co2Trend">
+                                            <i class="bi bi-arrow-down-short"></i> Reduced
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card stat-card-compact">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="stat-icon-compact" style="background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%);">
+                                        <i class="bi bi-recycle" style="color: #F97316;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <p class="stat-label-compact">Sustainability</p>
+                                        <h3 class="stat-value-compact" style="color: #1F2937;">95%</h3>
+                                        <span class="stat-change positive">
+                                            <i class="bi bi-check-circle-fill"></i> Excellent
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                     <div class="card mb-4"> 
                         <div class="card-header"> 
                             <h4><i class="bi bi-basket-fill me-1" style="color: var(--asparagus);"></i> Get Food Packaging Recommendations</h4> 
@@ -839,39 +1050,135 @@
  
                 <!-- ANALYTICS SECTION --> 
                 <div id="analyticsSection" class="section hidden"> 
-                    <!-- Summary Cards Row -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                           <div class="card" style="border: 1px solid #E5E7EB; border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm); background: var(--white);">
-                                <div class="card-body p-4">
-                                    <div class="row g-4">
-                                        <div class="col-md-3 text-center">
-                                            <div class="mb-2">
-                                                <i class="bi bi-graph-up-arrow" style="font-size: 2.5rem; color: var(--asparagus);"></i>
-                                            </div>
-                                            <h3 class="fw-bold mb-1" id="analyticsAvgSavings">₹0.00</h3>
-                                            <p class="text-muted mb-0 small">Avg Cost Savings per Rec</p>
+                    <!-- Header with Export Buttons -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h3 class="fw-bold mb-1">Business Intelligence Dashboard</h3>
+                            <p class="text-muted mb-0">Comprehensive analytics and performance metrics</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-success" onclick="exportAnalyticsExcel()">
+                                <i class="bi bi-file-earmark-excel"></i> Export Excel
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="exportAnalyticsPDF()">
+                                <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Unique Executive Summary Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="bi-metric-card">
+                                <div class="bi-metric-icon" style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);">
+                                    <i class="bi bi-graph-up-arrow" style="color: #6366F1;"></i>
+                                </div>
+                                <div class="bi-metric-value" id="analyticsAvgSavings" style="color: #6366F1;">₹0.00</div>
+                                <div class="bi-metric-label">Avg Savings per Rec</div>
+                                <div class="trend-indicator trend-up">
+                                    <i class="bi bi-arrow-up-short"></i> Performance
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="bi-metric-card">
+                                <div class="bi-metric-icon" style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);">
+                                    <i class="bi bi-cloud-arrow-down" style="color: #22C55E;"></i>
+                                </div>
+                                <div class="bi-metric-value" id="analyticsAvgCO2" style="color: #22C55E;">0.00</div>
+                                <div class="bi-metric-label">Avg CO₂ Reduction</div>
+                                <div class="trend-indicator trend-up">
+                                    <i class="bi bi-leaf-fill"></i> Environmental
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="bi-metric-card">
+                                <div class="bi-metric-icon" style="background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);">
+                                    <i class="bi bi-calendar-check" style="color: #0EA5E9;"></i>
+                                </div>
+                                <div class="bi-metric-value" id="analyticsThisMonth" style="color: #0EA5E9;">0</div>
+                                <div class="bi-metric-label">Recommendations</div>
+                                <div class="trend-indicator trend-up">
+                                    <i class="bi bi-clock-history"></i> This Month
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="bi-metric-card">
+                                <div class="bi-metric-icon" style="background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);">
+                                    <i class="bi bi-trophy-fill" style="color: #F59E0B;"></i>
+                                </div>
+                                <div class="bi-metric-value" id="analyticsBestSaving" style="color: #F59E0B;">₹0.00</div>
+                                <div class="bi-metric-label">Best Single Saving</div>
+                                <div class="trend-indicator" style="background: #FEF3C7; color: #92400E;">
+                                    <i class="bi bi-star-fill"></i> Record
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Trends - EQUAL SIZE CHARTS -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-lg-6">
+                            <div class="bi-card">
+                                <div class="bi-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1 fw-bold"><i class="bi bi-bar-chart-fill text-primary me-2"></i>Cost Savings Trend</h5>
+                                            <small class="text-muted">Track cost optimization over time</small>
                                         </div>
-                                        <div class="col-md-3 text-center">
-                                            <div class="mb-2">
-                                                <i class="bi bi-cloud-arrow-down" style="font-size: 2.5rem; color: var(--asparagus);"></i>
-                                            </div>
-                                            <h3 class="fw-bold mb-1" id="analyticsAvgCO2">0.00</h3>
-                                            <p class="text-muted mb-0 small">Avg CO₂ Reduction per Rec</p>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-arrow-up text-success"></i> Trending
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container-enhanced" style="height: 300px;">
+                                        <canvas id="costChart"></canvas>
+                                    </div>
+                                    <div class="row text-center mt-3 pt-3 border-top">
+                                        <div class="col-6">
+                                            <small class="text-muted d-block mb-1">Total Saved</small>
+                                            <strong class="text-primary" id="costChartTotal">₹0.00</strong>
                                         </div>
-                                        <div class="col-md-3 text-center">
-                                            <div class="mb-2">
-                                                <i class="bi bi-calendar-check" style="font-size: 2.5rem; color: var(--charcoal);"></i>
-                                            </div>
-                                            <h3 class="fw-bold mb-1" id="analyticsThisMonth">0</h3>
-                                            <p class="text-muted mb-0 small">Recommendations This Month</p>
+                                        <div class="col-6">
+                                            <small class="text-muted d-block mb-1">Best Period</small>
+                                            <strong class="text-primary" id="costChartBest">Rec 1</strong>
                                         </div>
-                                        <div class="col-md-3 text-center">
-                                            <div class="mb-2">
-                                                <i class="bi bi-trophy-fill" style="font-size: 2.5rem; color: #ffd700;"></i>
-                                            </div>
-                                            <h3 class="fw-bold mb-1" id="analyticsBestSaving">₹0.00</h3>
-                                            <p class="text-muted mb-0 small">Best Single Saving</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="bi-card">
+                                <div class="bi-card-header">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h5 class="mb-1 fw-bold"><i class="bi bi-cloud-fill text-success me-2"></i>CO₂ Reduction Trend</h5>
+                                            <small class="text-muted">Monitor environmental impact</small>
+                                        </div>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="bi bi-graph-down text-success"></i> Impact
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container-enhanced" style="height: 300px;">
+                                        <canvas id="co2Chart"></canvas>
+                                    </div>
+                                    <div class="row text-center mt-3 pt-3 border-top">
+                                        <div class="col-6">
+                                            <small class="text-muted d-block mb-1">Total Reduced</small>
+                                            <strong class="text-success" id="co2ChartTotal">0.00</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted d-block mb-1">Best Period</small>
+                                            <strong class="text-success" id="co2ChartBest">Rec 1</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -879,89 +1186,67 @@
                         </div>
                     </div>
 
-                    <!-- Charts Row -->
-                    <div class="row"> 
-                        <div class="col-md-6 mb-4"> 
-                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"> 
-                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h4 class="mb-1"><i class="bi bi-bar-chart-fill text-success me-2"></i>Cost Savings Trend</h4>
-                                            <small class="text-muted">Track your cost optimization over time</small>
-                                        </div>
-                                        <span class="badge" style="background: #D1FAE5; color: #065F46; font-size: 0.85rem; padding: 0.5rem 1rem; font-weight: 600;">
-                                            <i class="bi bi-arrow-up-right"></i> Trending
-                                        </span>
-                                    </div>
-                                </div> 
-                                <div class="card-body" style="padding: 2rem;"> 
-                                    <div class="chart-container" style="position: relative; height: 320px;"> 
-                                        <canvas id="costChart"></canvas> 
-                                    </div> 
-                                    <div class="mt-3 pt-3 border-top">
-                                        <div class="row text-center">
-                                            <div class="col-6">
-                                                <small class="text-muted d-block mb-1">Total Saved</small>
-                                                <strong class="text-success" id="costChartTotal">₹0.00</strong>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted d-block mb-1">Best Period</small>
-                                                <strong class="text-success" id="costChartBest">Rec 1</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div> 
-                            </div> 
-                        </div> 
-                        <div class="col-md-6 mb-4"> 
-                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);"> 
-                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h4 class="mb-1"><i class="bi bi-cloud-fill me-2" style="color: var(--charcoal);"></i>CO₂ Reduction Trend</h4>
-                                            <small class="text-muted">Monitor your environmental impact</small>
-                                        </div>
-                                        <span class="badge" style="background: #DBEAFE; color: #1E40AF; font-size: 0.85rem; padding: 0.5rem 1rem; font-weight: 600;">
-                                            <i class="bi bi-graph-down"></i> Impact
-                                        </span>
-                                    </div>
-                                </div> 
-                                <div class="card-body" style="padding: 2rem;"> 
-                                    <div class="chart-container" style="position: relative; height: 320px;"> 
-                                        <canvas id="co2Chart"></canvas> 
-                                    </div>
-                                    <div class="mt-3 pt-3 border-top">
-                                        <div class="row text-center">
-                                            <div class="col-6">
-                                                <small class="text-muted d-block mb-1">Total Reduced</small>
-                                                <strong style="color: var(--asparagus);" id="co2ChartTotal">0.00</strong>
-                                            </div>
-                                            <div class="col-6">
-                                                <small class="text-muted d-block mb-1">Best Period</small>
-                                                <strong style="color: var(--asparagus);" id="co2ChartBest">Rec 1</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div> 
-                            </div> 
-                        </div> 
-                    </div>
-
-                    <!-- Insights Cards Row -->
-                    <div class="row">
-                        <div class="col-md-12 mb-4">
-                            <div class="card" style="border: none; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-                                <div class="card-header" style="background: var(--white); border-bottom: 1px solid #E5E7EB; padding: 1.25rem 1.5rem;">
-                                    <h4 class="mb-0 fw-semibold" style="color: var(--charcoal);"><i class="bi bi-lightbulb-fill me-2" style="color: #F59E0B;"></i>Key Performance Insights</h4>
+                    <!-- Material Distribution & Performance Matrix - EQUAL SIZE -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-lg-6">
+                            <div class="bi-card" style="height: 100%;">
+                                <div class="bi-card-header">
+                                    <h5 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2"></i>Material Distribution</h5>
                                 </div>
-                                <div class="card-body p-4">
-                                    <div class="row g-4" id="analyticsInsights">
-                                        <div class="col-md-4">
-                                            <div class="p-4 text-center" style="background: linear-gradient(135deg, rgba(105, 153, 93, 0.1) 0%, rgba(105, 153, 93, 0.05) 100%); border-radius: 16px; border: 2px dashed var(--asparagus);">
-                                                <i class="bi bi-hourglass-split" style="font-size: 2rem; color: var(--asparagus);"></i>
-                                                <p class="mb-0 mt-2 text-muted">Loading insights...</p>
-                                            </div>
-                                        </div>
+                                <div class="card-body">
+                                    <div class="chart-container-enhanced" style="height: 280px;">
+                                        <canvas id="materialDistChart"></canvas>
+                                    </div>
+                                    <div class="text-center mt-3 pt-3 border-top">
+                                        <small class="text-muted">Most used materials in your recommendations</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="bi-card" style="height: 100%;">
+                                <div class="bi-card-header">
+                                    <h5 class="mb-0 fw-bold"><i class="bi bi-speedometer2 me-2"></i>Performance Scorecard</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0" style="font-size: 0.9rem;">
+                                            <thead style="background: #f8f9fa;">
+                                                <tr>
+                                                    <th style="padding: 0.75rem;">Metric</th>
+                                                    <th style="padding: 0.75rem;">Value</th>
+                                                    <th style="padding: 0.75rem;">Target</th>
+                                                    <th style="padding: 0.75rem;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="performanceMatrix">
+                                                <tr>
+                                                    <td style="padding: 0.75rem;"><strong>Avg Cost Savings</strong></td>
+                                                    <td style="padding: 0.75rem;" id="pmCostThis">₹0.00</td>
+                                                    <td style="padding: 0.75rem;">₹250+</td>
+                                                    <td style="padding: 0.75rem;"><span class="badge bg-success">On Track</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 0.75rem;"><strong>Avg CO₂ Reduction</strong></td>
+                                                    <td style="padding: 0.75rem;" id="pmCO2This">0.00</td>
+                                                    <td style="padding: 0.75rem;">50+</td>
+                                                    <td style="padding: 0.75rem;"><span class="badge bg-success">Excellent</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 0.75rem;"><strong>Total Recommendations</strong></td>
+                                                    <td style="padding: 0.75rem;" id="pmRecsThis">0</td>
+                                                    <td style="padding: 0.75rem;">10+/month</td>
+                                                    <td style="padding: 0.75rem;"><span class="badge bg-primary">Active</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding: 0.75rem;"><strong>Sustainability Score</strong></td>
+                                                    <td style="padding: 0.75rem;">95%</td>
+                                                    <td style="padding: 0.75rem;">90%+</td>
+                                                    <td style="padding: 0.75rem;"><span class="badge bg-success">Achieved</span></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>
@@ -1103,42 +1388,37 @@ async function loadAnalytics() {
         const data = await res.json();
         
         if (data.analytics) {
+            // Update total recommendations
             document.getElementById('totalRecs').textContent = data.analytics.total_recommendations || 0;
             
             // ===== COST HANDLING =====
             const costSavings = parseFloat(data.analytics.total_cost_savings) || 0;
-            const costCard = document.querySelector('.stat-card.cost-savings');
             const costElement = document.getElementById('totalCost');
-            const costLabel = costCard.querySelector('p');
+            const costTrend = document.getElementById('costTrend');
 
             if (costSavings >= 0) {
-                // Positive = Savings (good)
                 costElement.textContent = '₹' + costSavings.toFixed(2);
-                costLabel.textContent = 'Cost Savings';
-                costCard.style.background = 'linear-gradient(135deg, var(--stat-blue) 0%, var(--stat-blue-dark) 100%)';
+                costTrend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Optimized';
+                costTrend.className = 'stat-change positive';
             } else {
-                // Negative = Increase (bad)
-                costElement.textContent = '₹' + costSavings.toFixed(2);  // Keep negative sign
-                costLabel.textContent = 'Cost Increase';
-                costCard.style.background = 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)';
+                costElement.textContent = '₹' + Math.abs(costSavings).toFixed(2);
+                costTrend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
+                costTrend.className = 'stat-change negative';
             }
             
             // ===== CO₂ HANDLING =====
             const co2Reduction = parseFloat(data.analytics.total_co2_reduction) || 0;
-            const co2Card = document.querySelector('.stat-card.co2-impact');
             const co2Element = document.getElementById('totalCO2');
-            const co2Label = co2Card.querySelector('p');
+            const co2Trend = document.getElementById('co2Trend');
             
             if (co2Reduction >= 0) {
-                // Positive = Reduction (good)
                 co2Element.textContent = co2Reduction.toFixed(2);
-                co2Label.textContent = 'CO₂ Reduction';
-                co2Card.style.background = 'linear-gradient(135deg, var(--stat-green) 0%, var(--stat-green-dark) 100%)';
+                co2Trend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Reduced';
+                co2Trend.className = 'stat-change positive';
             } else {
-                // Negative = Increase (bad)
-                co2Element.textContent = co2Reduction.toFixed(2);  // Keep negative sign
-                co2Label.textContent = 'CO₂ Increase';
-                co2Card.style.background = 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)';
+                co2Element.textContent = Math.abs(co2Reduction).toFixed(2);
+                co2Trend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
+                co2Trend.className = 'stat-change negative';
             }
         } else {
             document.getElementById('totalRecs').textContent = '0';
@@ -2232,179 +2512,7 @@ function displayBulk(data) {
 // ============================================================================
 // FIX #4: Fixed History Loading
 // ============================================================================
-async function loadHistory() {
-    try {
-        const res = await fetch(`${API}/analytics/user`, {
-            credentials: 'include'
-        });
-        
-        if (handleAuthError(res)) {
-            document.getElementById('historyList').innerHTML = 
-                '<p class="text-danger text-center py-5">Session expired. Please log in again.</p>';
-            return;
-        }
-        
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        
-        const data = await res.json();
-        let html = '';
-        
-        if (data.recent && data.recent.length > 0) {
-            data.recent.forEach((h, index) => {
-                const date = new Date(h.created_at);
-                const formattedDate = date.toLocaleDateString('en-IN', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric'
-                });
-                const formattedTime = date.toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                const costSavings = parseFloat(h.cost_savings || 0);
-                const co2Reduction = parseFloat(h.co2_reduction || 0);
-                
-                // Determine if it's a saving or increase
-                const isCostSaving = costSavings >= 0;
-                const isCO2Reduction = co2Reduction >= 0;
-                
-                // Calculate days ago
-                const daysAgo = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
-                const timeAgo = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo} days ago`;
-                
-                html += `
-                    <div class="history-item fade-in" style="animation-delay: ${index * 0.05}s; border: 2px solid #e9ecef; margin-bottom: 1.5rem; border-radius: 16px; overflow: hidden; transition: all 0.3s ease;">
-                        <div class="row g-0">
-                            <!-- Left: Date & Time Badge -->
-                            <div class="col-md-2 col-lg-1" style="background: linear-gradient(135deg, var(--stat-purple) 0%, var(--stat-purple-dark) 100%); color: white;
-                                <div style="font-size: 2rem; font-weight: 800; line-height: 1;">${date.getDate()}</div>
-                                <div style="font-size: 0.9rem; font-weight: 600; text-transform: uppercase; opacity: 0.9;">${date.toLocaleDateString('en-IN', { month: 'short' })}</div>
-                                <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">${date.getFullYear()}</div>
-                                <hr style="width: 80%; border-color: rgba(255,255,255,0.3); margin: 0.75rem 0;">
-                                <div style="font-size: 0.8rem; opacity: 0.9;">
-                                    <i class="bi bi-clock"></i> ${formattedTime}
-                                </div>
-                            </div>
-                            
-                            <!-- Middle: Details -->
-                            <div class="col-md-6" style="padding: 1.5rem 2rem; background: white;">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div>
-                                        <h6 class="mb-1 fw-bold" style="color: var(--charcoal); font-size: 1.1rem;">
-                                            <i class="bi bi-box-seam-fill me-2" style="color: var(--asparagus);"></i>
-                                            Recommendation #${h.id}
-                                        </h6>
-                                        <p class="mb-0 text-muted small">
-                                            <i class="bi bi-calendar3"></i> ${timeAgo} • ${formattedDate}
-                                        </p>
-                                    </div>
-                                    <span class="badge bg-light text-dark border" style="font-size: 0.75rem; padding: 0.4rem 0.8rem;">
-                                        <i class="bi bi-check-circle-fill text-success me-1"></i> Completed
-                                    </span>
-                                </div>
-                                
-                                <div class="mt-3" style="border-top: 1px solid #f0f0f0; padding-top: 1rem;">
-                                    <div class="row g-2">
-                                        <div class="col-6">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isCostSaving ? '#28a745' : '#dc3545'};"></div>
-                                                <span class="small text-muted">Cost Impact</span>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div style="width: 8px; height: 8px; border-radius: 50%; background: ${isCO2Reduction ? '#28a745' : '#dc3545'};"></div>
-                                                <span class="small text-muted">CO₂ Impact</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Right: Metrics -->
-                            <div class="col-md-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 1.5rem 2rem; border-left: 3px solid var(--burlywood);">
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <span class="text-muted small fw-semibold" style="text-transform: uppercase; letter-spacing: 0.5px;">
-                                            <i class="bi bi-currency-rupee"></i> Cost Savings
-                                        </span>
-                                        ${isCostSaving ? 
-                                            '<span class="badge" style="background: #DBEAFE; color: #0EA5E9; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">SAVED</span>' : 
-                                            '<span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">INCREASE</span>'
-                                        }
-                                    </div>
-                                    <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="mb-0 fw-bold" style="font-size: 1.75rem; color: ${isCostSaving ? 'var(--stat-blue)' : '#DC2626'};">
-                                            ${isCostSaving ? '' : ''}₹${Math.abs(costSavings).toFixed(2)}
-                                        </h4>
-                                        <span class="small text-muted">${isCostSaving ? 'saved' : 'increased'}</span>
-                                    </div>
-                                    ${!isCostSaving ? '<small class="text-muted d-block mt-1">Higher cost alternative selected</small>' : ''}
-                                </div>
-                                
-                                <hr style="border-color: #dee2e6; opacity: 0.5; margin: 1rem 0;">
-                                
-                                <div>
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <span class="text-muted small fw-semibold" style="text-transform: uppercase; letter-spacing: 0.5px;">
-                                            <i class="bi bi-cloud-fill"></i> CO₂ Impact
-                                        </span>
-                                        ${isCO2Reduction ? 
-                                            '<span class="badge" style="background: #D1FAE5; color: #10B981; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">REDUCED</span>' : 
-                                            '<span class="badge" style="background: #FEE2E2; color: #DC2626; font-size: 0.7rem; padding: 0.25rem 0.5rem; font-weight: 600;">INCREASED</span>'
-                                        }
-                                    </div>
-                                    <div class="d-flex align-items-baseline gap-2">
-                                        <h4 class="mb-0 fw-bold" style="font-size: 1.75rem; color: ${isCO2Reduction ? 'var(--stat-green)' : '#DC2626'};">
-                                            ${isCO2Reduction ? '' : ''}${Math.abs(co2Reduction).toFixed(2)}
-                                        </h4>
-                                        <span class="small text-muted">score ${isCO2Reduction ? 'reduction' : 'increase'}</span>
-                                    </div>
-                                    ${!isCO2Reduction ? '<small class="text-muted d-block mt-1">Higher impact alternative</small>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            html = `
-                <div class="text-center py-5" style="background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-                    <div style="font-size: 5rem; color: #e9ecef; margin-bottom: 1rem;">
-                        <i class="bi bi-inbox"></i>
-                    </div>
-                    <h5 class="fw-bold mb-2" style="color: var(--charcoal);">No Recommendation History Yet</h5>
-                    <p class="text-muted mb-4">Start by getting your first packaging recommendation to see your impact history here.</p>
-                    <button class="btn btn-primary" onclick="showSection(event, 'recommendation')" style="padding: 0.75rem 2rem;">
-                        <i class="bi bi-plus-circle me-2"></i> Get Your First Recommendation
-                    </button>
-                </div>
-            `;
-        }
-        
-        document.getElementById('historyList').innerHTML = html;
-    } catch (e) {
-        console.error('History error:', e);
-        document.getElementById('historyList').innerHTML = `
-            <div class="alert alert-danger" style="border-radius: 16px; border: 2px solid #dc3545;">
-                <div class="d-flex align-items-start gap-3">
-                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 2rem; color: #dc3545;"></i>
-                    <div>
-                        <h5 class="mb-2">Error Loading History</h5>
-                        <p class="mb-1"><strong>Message:</strong> ${e.message}</p>
-                        <hr style="border-color: rgba(220, 53, 69, 0.2);">
-                        <small class="text-muted">
-                            Please try refreshing the page or contact support if the issue persists.
-                        </small>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-}
+loadHistory()
 
 async function loadCharts() {
     const ctx1 = document.getElementById('costChart');
@@ -2642,6 +2750,65 @@ async function loadCharts() {
                 }
             }
         });
+
+        // Add this inside loadCharts() function, after the CO2 chart
+// Material Distribution Chart (Pie Chart)
+const materialCtx = document.getElementById('materialDistChart');
+if (materialCtx) {
+    if (charts.materialDist) charts.materialDist.destroy();
+    
+    // Sample data - you can populate this from analytics
+    const materialData = {
+        labels: ['Plastic', 'Cardboard', 'Glass', 'Metal', 'Paper'],
+        data: [30, 25, 20, 15, 10]
+    };
+    
+    charts.materialDist = new Chart(materialCtx.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: materialData.labels,
+            datasets: [{
+                data: materialData.data,
+                backgroundColor: [
+                    '#1F77B4',
+                    '#FF7F0E',
+                    '#2CA02C',
+                    '#D62728',
+                    '#9467BD'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: { size: 11, family: 'Inter' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: '#1F2937',
+                    padding: 12,
+                    callbacks: {
+                        label: (context) => `${context.label}: ${context.parsed}%`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update Performance Matrix with real data
+if (data.analytics) {
+    document.getElementById('pmCostThis').textContent = `₹${avgCost.toFixed(2)}`;
+    document.getElementById('pmCO2This').textContent = avgCO2.toFixed(2);
+    document.getElementById('pmRecsThis').textContent = recentData.length || 0;
+}
     } catch (e) {
         console.error('Charts error:', e);
     }
@@ -2768,6 +2935,17 @@ function downloadBulkResults() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+}
+
+// Export Analytics to Excel
+function exportAnalyticsExcel() {
+    alert('Excel export functionality - Connect to backend to generate Excel report');
+    // TODO: Implement Excel export via backend
+}
+
+// Export Analytics to PDF
+function exportAnalyticsPDF() {
+    window.print(); // Simple PDF export via browser print
 }
     </script>     
     <!-- Footer -->
