@@ -1423,6 +1423,7 @@ def get_user_analytics(current_user_id):
         }), 200  
     except Exception as e:  
         return jsonify({'error': str(e)}), 500  
+     
 @app.route('/api/history', methods=['GET'])
 @token_required
 def get_user_history(current_user_id):
@@ -1430,8 +1431,11 @@ def get_user_history(current_user_id):
     Get complete recommendation history with all recommendation details
     """
     try:
+        print(f"\n[History API] Request from user {current_user_id}")
+        
         conn = get_db_connection()
         if not conn:
+            print("[History API] Database connection failed")
             return jsonify({'error': 'Database connection failed'}), 503
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1454,24 +1458,36 @@ def get_user_history(current_user_id):
         
         history_records = cur.fetchall()
         
+        print(f"[History API] Found {len(history_records)} records")
+        
         cur.close()
         conn.close()
         
         # Format the response
         result = []
         for record in history_records:
-            # Parse JSONB fields
-            current_pkg = record['current_packaging'] if record['current_packaging'] else {}
-            recommendations = record['recommendations'] if record['recommendations'] else []
-            
-            result.append({
-                'id': record['id'],
-                'created_at': record['created_at'].isoformat() if record['created_at'] else None,
-                'cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0,
-                'co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0,
-                'current_packaging': current_pkg,
-                'recommendations': recommendations
-            })
+            try:
+                # Parse JSONB fields safely
+                current_pkg = record['current_packaging'] if record['current_packaging'] else {}
+                recommendations = record['recommendations'] if record['recommendations'] else []
+                
+                # Ensure numeric values are properly converted
+                cost_savings = float(record['cost_savings']) if record['cost_savings'] else 0.0
+                co2_reduction = float(record['co2_reduction']) if record['co2_reduction'] else 0.0
+                
+                result.append({
+                    'id': record['id'],
+                    'created_at': record['created_at'].isoformat() if record['created_at'] else None,
+                    'cost_savings': cost_savings,
+                    'co2_reduction': co2_reduction,
+                    'current_packaging': current_pkg,
+                    'recommendations': recommendations
+                })
+            except Exception as e:
+                print(f"[History API] Error processing record {record.get('id')}: {e}")
+                continue
+        
+        print(f"[History API] Successfully formatted {len(result)} records")
         
         return jsonify({
             'success': True,
@@ -1480,7 +1496,8 @@ def get_user_history(current_user_id):
         }), 200
         
     except Exception as e:
-        print(f"Error fetching history: {e}")
+        print(f"[History API] Error fetching history: {e}")
+        print(f"[History API] Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
   
 # ============================================================================  
