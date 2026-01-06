@@ -1438,8 +1438,8 @@ def get_user_analytics(current_user_id):
 @token_required
 def get_user_history(current_user_id):
     """
-    Get complete recommendation history with ALL fields from database
-    Much simpler - just return the entire recommendations table
+    Get complete recommendation history - OPTIMIZED for clean table display
+    Returns structured data ready for frontend rendering
     """
     try:
         print(f"\n[History API] Request from user {current_user_id}")
@@ -1451,7 +1451,7 @@ def get_user_history(current_user_id):
         
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Get all recommendations with ALL fields
+        # Get all recommendations with structured data
         cur.execute('''
             SELECT 
                 id,
@@ -1464,7 +1464,7 @@ def get_user_history(current_user_id):
             FROM recommendations_history
             WHERE user_id = %s
             ORDER BY created_at DESC
-            LIMIT 50
+            LIMIT 100
         ''', (current_user_id,))
         
         history_records = cur.fetchall()
@@ -1474,18 +1474,55 @@ def get_user_history(current_user_id):
         cur.close()
         conn.close()
         
-        # Format the response - convert to JSON-serializable format
+        # Format the response with clean structure
         result = []
         for record in history_records:
             try:
+                # Extract product details from JSONB
+                product_details = record['product_details'] if record['product_details'] else {}
+                current_pkg = record['current_packaging'] if record['current_packaging'] else {}
+                recommendations = record['recommendations'] if record['recommendations'] else []
+                
+                # Find best recommendation (first one, already sorted by improvement_score)
+                best_rec = recommendations[0] if recommendations else None
+                
                 result.append({
                     'id': record['id'],
                     'created_at': record['created_at'].isoformat() if record['created_at'] else None,
-                    'cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0.0,
-                    'co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0.0,
-                    'current_packaging': record['current_packaging'] if record['current_packaging'] else {},
-                    'product_details': record['product_details'] if record['product_details'] else {},
-                    'recommendations': record['recommendations'] if record['recommendations'] else []
+                    
+                    # Product specifications
+                    'product': {
+                        'material': product_details.get('material', 'N/A'),
+                        'shape': product_details.get('shape', 'N/A'),
+                        'weight_measured': product_details.get('weight_measured', 0),
+                        'weight_capacity': product_details.get('weight_capacity', 0),
+                        'recyclability_percent': product_details.get('recyclability_percent', 0),
+                        'strength': product_details.get('strength', 'N/A'),
+                        'food_group': product_details.get('food_group', 'N/A')
+                    },
+                    
+                    # Current packaging metrics
+                    'current': {
+                        'cost': float(current_pkg.get('cost', 0)),
+                        'co2': float(current_pkg.get('co2', 0))
+                    },
+                    
+                    # Best alternative (for summary)
+                    'best_alternative': {
+                        'material': best_rec.get('material', 'N/A') if best_rec else 'N/A',
+                        'shape': best_rec.get('shape', 'N/A') if best_rec else 'N/A',
+                        'predicted_cost': float(best_rec.get('predicted_cost', 0)) if best_rec else 0,
+                        'predicted_co2': float(best_rec.get('predicted_co2', 0)) if best_rec else 0,
+                        'cost_savings': float(best_rec.get('cost_savings', 0)) if best_rec else 0,
+                        'co2_reduction': float(best_rec.get('co2_reduction', 0)) if best_rec else 0
+                    },
+                    
+                    # Overall impact
+                    'total_cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0.0,
+                    'total_co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0.0,
+                    
+                    # All recommendations (for expandable view)
+                    'all_recommendations': recommendations
                 })
             except Exception as e:
                 print(f"[History API] Error processing record {record.get('id')}: {e}")
