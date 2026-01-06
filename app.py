@@ -1197,20 +1197,30 @@ def get_recommendations(current_user_id):
         recommendations = []  
           
         for alt in alternatives:  
-            alt_cost, alt_co2, _ = ml_manager.predict(alt)  
-            if alt_cost and alt_co2:  
-                cost_savings = current_cost - alt_cost  
-                co2_reduction = current_co2 - alt_co2  
-                recommendations.append({  
-                    'material': alt['material'],  
-                    'shape': alt['shape'],  
-                    'strength': alt['strength'],  
-                    'predicted_cost': round(alt_cost, 2),  
-                    'predicted_co2': round(alt_co2, 2),  
-                    'cost_savings': round(cost_savings, 2),  
-                    'co2_reduction': round(co2_reduction, 2),  
-                    'improvement_score': calculate_score(cost_savings, co2_reduction)  
-                })  
+          alt_cost, alt_co2, _ = ml_manager.predict(alt)  
+          if alt_cost and alt_co2:  
+              cost_savings = current_cost - alt_cost  
+              co2_reduction = current_co2 - alt_co2  
+              recommendations.append({  
+                  # ALL FIELDS from alternative
+                  'material': alt['material'],  
+                  'parent_material': alt.get('parent_material', ''),
+                  'shape': alt['shape'],  
+                  'strength': alt['strength'],  
+                  'recycling': alt.get('recycling', ''),
+                  'food_group': alt.get('food_group', ''),
+                  'product_quantity': alt.get('product_quantity', 0),
+                  'weight_measured': alt.get('weight_measured', 0),
+                  'weight_capacity': alt.get('weight_capacity', 0),
+                  'number_of_units': alt.get('number_of_units', 1),
+                  'recyclability_percent': alt.get('recyclability_percent', 0),
+                  # Predictions
+                  'predicted_cost': round(alt_cost, 2),  
+                  'predicted_co2': round(alt_co2, 2),  
+                  'cost_savings': round(cost_savings, 2),  
+                  'co2_reduction': round(co2_reduction, 2),  
+                  'improvement_score': calculate_score(cost_savings, co2_reduction)  
+              }) 
           
         recommendations.sort(key=lambda x: x['improvement_score'], reverse=True)  
           
