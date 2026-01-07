@@ -1409,19 +1409,25 @@ def get_user_analytics(current_user_id):
         conn = get_db_connection()  
         if not conn: 
              return jsonify({'error': 'Database connection failed'}), 503 
- 
+
         cur = conn.cursor(cursor_factory=RealDictCursor)  
           
         cur.execute('SELECT * FROM user_analytics WHERE user_id = %s', (current_user_id,))  
         analytics = cur.fetchone()  
           
+        # ✅ Get ALL history for charts
         cur.execute('''  
-            SELECT id, cost_savings, co2_reduction, created_at, recommendations
+            SELECT 
+                id, 
+                cost_savings, 
+                co2_reduction, 
+                created_at, 
+                recommendations,
+                product_details
             FROM recommendations_history  
             WHERE user_id = %s  
-            ORDER BY created_at DESC  
-            LIMIT 10  
-        ''', (current_user_id,))
+            ORDER BY created_at ASC
+        ''', (current_user_id,))  
         history = cur.fetchall()  
           
         cur.close()  
@@ -1429,10 +1435,11 @@ def get_user_analytics(current_user_id):
           
         return jsonify({  
             'analytics': dict(analytics) if analytics else {},  
-            'recent': [dict(h) for h in history]  
+            'history': [dict(h) for h in history],  # ALL data
+            'recent': [dict(h) for h in history[-10:]]  # Last 10
         }), 200  
     except Exception as e:  
-        return jsonify({'error': str(e)}), 500  
+        return jsonify({'error': str(e)}), 500
      
 @app.route('/api/history', methods=['GET'])
 @token_required
