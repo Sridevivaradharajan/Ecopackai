@@ -10,6 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
     <style> 
         :root { 
             --charcoal: #2C3E50; 
@@ -1331,8 +1334,8 @@
                     <div class="card"> 
                         <div class="card-header"> 
                             <h4><i class="bi bi-clock-history"></i> Your Recommendation History</h4> 
-                        </div> 
-                        <div class="card-body"> 
+                        </div>
+                        <div class="card-body p-0"> 
                             <div id="historyList"> 
                                 <div class="text-center py-5"> 
                                     <div class="spinner-border text-success mb-3"></div> 
@@ -1341,10 +1344,7 @@
                             </div> 
                         </div> 
                     </div> 
-                </div> 
-            </div> 
-        </div> 
-    </div> 
+                </div>
  
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script> 
     <script> 
@@ -2581,8 +2581,34 @@ function displayBulk(data) {
     document.getElementById('bulkDownload').classList.remove('hidden');
 }
 
+function toggleHistoryDetails(id) {
+    const detailsRow = document.getElementById(`details-${id}`);
+    const chevron = document.getElementById(`chevron-${id}`);
+    
+    if (!detailsRow || !chevron) {
+        console.error(`Elements not found for ID: ${id}`);
+        return;
+    }
+    
+    const isVisible = detailsRow.style.display !== 'none';
+    
+    if (isVisible) {
+        // Hide details
+        detailsRow.style.display = 'none';
+        chevron.classList.remove('bi-chevron-down');
+        chevron.classList.add('bi-chevron-right');
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        // Show details
+        detailsRow.style.display = 'table-row';
+        chevron.classList.remove('bi-chevron-right');
+        chevron.classList.add('bi-chevron-down');
+        chevron.style.transform = 'rotate(90deg)';
+    }
+}
+
 // ============================================================================
-// FIX #4: Fixed History Loading
+// FIXED HISTORY LOADING FUNCTION
 // ============================================================================
 async function loadHistory() {
     const historyList = document.getElementById('historyList');
@@ -2610,141 +2636,218 @@ async function loadHistory() {
                     <p class="text-muted mt-3">No recommendations yet. Start by getting some recommendations!</p>
                 </div>
             `;
+            globalHistoryData = [];
             return;
         }
         
+        // Store data globally for export
+        globalHistoryData = data.history;
+        
         let html = `
-            <div class="table-responsive">
-                <table class="table table-hover" style="border: 1px solid #e9ecef;">
-                    <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); position: sticky; top: 0; z-index: 10;">
+            <!-- Filter Bar -->
+            <div style="padding: 1.25rem 1.5rem; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-funnel-fill" style="color: var(--asparagus);"></i>
+                            <select class="form-select form-select-sm" id="historyFilter" onchange="filterHistory()" style="width: auto; border-radius: 6px;">
+                                <option value="all">All Records</option>
+                                <option value="savings">Cost Savings Only</option>
+                                <option value="reduction">CO₂ Reduction Only</option>
+                                <option value="recent">Last 30 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-sort-down" style="color: var(--asparagus);"></i>
+                            <select class="form-select form-select-sm" id="historySort" onchange="sortHistory()" style="width: auto; border-radius: 6px;">
+                                <option value="date_desc">Newest First</option>
+                                <option value="date_asc">Oldest First</option>
+                                <option value="cost_desc">Highest Cost Savings</option>
+                                <option value="co2_desc">Highest CO₂ Reduction</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark border px-3 py-2">
+                                <i class="bi bi-bar-chart-fill me-1"></i>
+                                <strong>${data.history.length}</strong> Total Records
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Table -->
+            <div style="overflow-x: auto; overflow-y: auto; max-height: 70vh;">
+                <table class="table table-hover mb-0" style="background: white; font-size: 0.85rem;">
+                    <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                         <tr>
-                            <th style="padding: 1rem; border: none; font-weight: 700; width: 50px;"></th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Date</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Product Details</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Current Cost</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Current CO₂</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Best Alternative</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">Cost Impact</th>
-                            <th style="padding: 1rem; border: none; font-weight: 700;">CO₂ Impact</th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 130px; font-size: 0.8rem;">
+                                <i class="bi bi-calendar-event me-1"></i>Date & Time
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 115px; font-size: 0.8rem;">
+                                <i class="bi bi-box-seam me-1"></i>Material
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 95px; font-size: 0.8rem;">
+                                Shape
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 85px; font-size: 0.8rem;">
+                                Strength
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 130px; font-size: 0.8rem;">
+                                <i class="bi bi-basket3 me-1"></i>Food Group
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 95px; font-size: 0.8rem;">
+                                Prod. Qty (g)
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 95px; font-size: 0.8rem;">
+                                Pkg. Wt (g)
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 90px; font-size: 0.8rem;">
+                                Recycle %
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 100px; text-align: right; font-size: 0.8rem;">
+                                <i class="bi bi-currency-rupee me-1"></i>Curr. Cost
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 100px; text-align: right; font-size: 0.8rem;">
+                                <i class="bi bi-cloud-fill me-1"></i>Curr. CO₂
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 165px; font-size: 0.8rem;">
+                                <i class="bi bi-trophy me-1"></i>Best Alternative
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 110px; text-align: center; font-size: 0.8rem;">
+                                <i class="bi bi-arrow-down-circle me-1"></i>Cost Impact
+                            </th>
+                            <th style="padding: 0.75rem; border: none; font-weight: 700; white-space: nowrap; min-width: 110px; text-align: center; font-size: 0.8rem;">
+                                <i class="bi bi-arrow-down-circle me-1"></i>CO₂ Impact
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="historyTableBody">
         `;
         
         data.history.forEach((item, index) => {
             const date = new Date(item.created_at).toLocaleString('en-IN', {
-                day: 'numeric',
+                day: '2-digit',
                 month: 'short',
                 year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: true
             });
             
-            const costClass = item.total_cost_savings >= 0 ? 'text-success' : 'text-danger';
-            const costIcon = item.total_cost_savings >= 0 ? '↓' : '↑';
-            const co2Class = item.total_co2_reduction >= 0 ? 'text-success' : 'text-danger';
-            const co2Icon = item.total_co2_reduction >= 0 ? '↓' : '↑';
+            const costSavings = item.total_cost_savings || 0;
+            const co2Reduction = item.total_co2_reduction || 0;
             
-            // Main row
+            const costClass = costSavings >= 0 ? 'text-success' : 'text-danger';
+            const costIcon = costSavings >= 0 ? '↓' : '↑';
+            const costBg = costSavings >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)';
+            
+            const co2Class = co2Reduction >= 0 ? 'text-success' : 'text-danger';
+            const co2Icon = co2Reduction >= 0 ? '↓' : '↑';
+            const co2Bg = co2Reduction >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)';
+            
+            // Format food group for display
+            const foodGroup = item.product.food_group || 'N/A';
+            const foodGroupDisplay = foodGroup.split('-').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+            
+            // Get product quantity - check multiple possible locations
+            const productQty = item.product.product_quantity || 
+                              item.product_quantity || 
+                              (item.product.details && item.product.details.product_quantity) || 
+                              'N/A';
+            
             html += `
-                <tr style="cursor: pointer; transition: background 0.2s;" 
-                    onclick="toggleHistoryDetails(${item.id})"
+                <tr class="history-row" 
+                    data-cost-savings="${costSavings}"
+                    data-co2-reduction="${co2Reduction}"
+                    data-date="${item.created_at}"
+                    style="border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
                     onmouseover="this.style.background='#f9fafb'" 
                     onmouseout="this.style.background='white'">
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <i class="bi bi-chevron-right" id="chevron-${item.id}" style="transition: transform 0.2s;"></i>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div class="fw-semibold" style="color: #1f2937; font-size: 0.8rem;">${date}</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">ID: REC-${item.id}</small>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div class="fw-semibold">${date}</div>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <span class="badge bg-primary text-uppercase" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">${item.product.material}</span>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div><strong>Material:</strong> <span class="text-capitalize badge bg-primary">${item.product.material}</span></div>
-                        <div><strong>Shape:</strong> <span class="text-capitalize">${item.product.shape}</span></div>
-                        <small class="text-muted">${item.product.weight_measured}g • ${item.product.strength} • ${item.product.recyclability_percent}% recyclable</small>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <span class="text-capitalize" style="font-size: 0.8rem;">${item.product.shape}</span>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div class="fw-bold fs-5">₹${item.current.cost.toFixed(2)}</div>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <span class="badge bg-info" style="padding: 0.35rem 0.6rem; font-size: 0.75rem;">${item.product.strength}</span>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div class="fw-bold fs-5">${item.current.co2.toFixed(2)}</div>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <span class="text-capitalize"style="font-size: 0.8rem; color: #1f2937; font-weight: 500;">${foodGroupDisplay}</span>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div><span class="badge" style="background: var(--asparagus); color: white; padding: 0.5rem 1rem;">
-                            ${item.best_alternative.material.toUpperCase()} ${item.best_alternative.shape.toUpperCase()}
-                        </span></div>
-                        <small class="text-muted">₹${item.best_alternative.predicted_cost.toFixed(2)} • ${item.best_alternative.predicted_co2.toFixed(2)} CO₂</small>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <span class="fw-semibold" style="font-size: 0.85rem;">${productQty}${productQty !== 'N/A' ? 'g' : ''}</span>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div class="${costClass} fw-bold fs-5">${costIcon} ₹${Math.abs(item.total_cost_savings).toFixed(2)}</div>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div style="font-size: 0.85rem; font-weight: 600;">${item.product.weight_measured}g</div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Cap: ${item.product.weight_capacity}g</small>
                     </td>
-                    <td style="padding: 1rem; border-top: 1px solid #e9ecef;">
-                        <div class="${co2Class} fw-bold fs-5">${co2Icon} ${Math.abs(item.total_co2_reduction).toFixed(2)}</div>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div class="progress" style="height: 20px; background: #e9ecef;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: ${item.product.recyclability_percent}%; font-size: 0.7rem; font-weight: 600;"
+                                 aria-valuenow="${item.product.recyclability_percent}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${item.product.recyclability_percent}%
+                            </div>
+                        </div>
                     </td>
-                </tr>
-            `;
-            
-            // Expandable detail row (hidden by default)
-            html += `
-                <tr id="details-${item.id}" style="display: none; background: #f8f9fa;">
-                    <td colspan="8" style="padding: 0;">
-                        <div style="padding: 1.5rem 2rem;">
-                            <h6 class="fw-bold mb-3"><i class="bi bi-list-stars me-2"></i>All Recommendations (${item.all_recommendations.length} alternatives)</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm mb-0" style="background: white;">
-                                    <thead style="background: #e9ecef;">
-                                        <tr>
-                                            <th style="padding: 0.75rem;">Rank</th>
-                                            <th style="padding: 0.75rem;">Material</th>
-                                            <th style="padding: 0.75rem;">Shape</th>
-                                            <th style="padding: 0.75rem;">Strength</th>
-                                            <th style="padding: 0.75rem;">Weight (g)</th>
-                                            <th style="padding: 0.75rem;">Capacity (g)</th>
-                                            <th style="padding: 0.75rem;">Recycle %</th>
-                                            <th style="padding: 0.75rem;">Cost</th>
-                                            <th style="padding: 0.75rem;">CO₂</th>
-                                            <th style="padding: 0.75rem;">Score</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-            `;
-            
-            item.all_recommendations.forEach((rec, recIndex) => {
-                const recCostClass = (rec.cost_savings || 0) >= 0 ? 'text-success' : 'text-danger';
-                const recCo2Class = (rec.co2_reduction || 0) >= 0 ? 'text-success' : 'text-danger';
-                const rowBg = recIndex === 0 ? 'background: rgba(34, 197, 94, 0.05);' : '';
-                
-                html += `
-                    <tr style="${rowBg}">
-                        <td style="padding: 0.75rem;">
-                            ${recIndex === 0 ? 
-                                '<span class="badge" style="background: #fbbf24; color: white;"><i class="bi bi-trophy-fill"></i> #1</span>' : 
-                                `<span class="badge bg-secondary">#${recIndex + 1}</span>`
-                            }
-                        </td>
-                        <td style="padding: 0.75rem;"><span class="text-capitalize fw-semibold">${rec.material || 'N/A'}</span></td>
-                        <td style="padding: 0.75rem;"><span class="text-capitalize">${rec.shape || 'N/A'}</span></td>
-                        <td style="padding: 0.75rem;"><span class="badge bg-light text-dark">${rec.strength || 'N/A'}</span></td>
-                        <td style="padding: 0.75rem;">${rec.weight_measured || item.product.weight_measured || 'N/A'}</td>
-                        <td style="padding: 0.75rem;">${rec.weight_capacity || item.product.weight_capacity || 'N/A'}</td>
-                        <td style="padding: 0.75rem;">${rec.recyclability_percent || item.product.recyclability_percent || 'N/A'}%</td>
-                        <td style="padding: 0.75rem;">
-                            <div class="fw-bold">₹${(rec.predicted_cost || 0).toFixed(2)}</div>
-                            <small class="${recCostClass}">${(rec.cost_savings || 0) >= 0 ? '↓' : '↑'} ₹${Math.abs(rec.cost_savings || 0).toFixed(2)}</small>
-                        </td>
-                        <td style="padding: 0.75rem;">
-                            <div class="fw-bold">${(rec.predicted_co2 || 0).toFixed(2)}</div>
-                            <small class="${recCo2Class}">${(rec.co2_reduction || 0) >= 0 ? '↓' : '↑'} ${Math.abs(rec.co2_reduction || 0).toFixed(2)}</small>
-                        </td>
-                        <td style="padding: 0.75rem;">
-                            <span class="badge" style="background: var(--asparagus); color: white;">${(rec.improvement_score || 0).toFixed(1)}</span>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            html += `
-                                    </tbody>
-                                </table>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6; text-align: right;">
+                        <div class="fw-bold" style="font-size: 0.95rem; color: #1f2937;">₹${item.current.cost.toFixed(2)}</div>
+                    </td>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6; text-align: right;">
+                        <div class="fw-bold" style="font-size: 0.95rem; color: #1f2937;">${item.current.co2.toFixed(2)}</div>
+                    </td>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div class="mb-1">
+                            <span class="badge text-uppercase" style="background: var(--asparagus); color: white; padding: 0.35rem 0.6rem; font-size: 0.75rem;">
+                                ${item.best_alternative.material}
+                            </span>
+                            <span class="badge bg-light text-dark text-capitalize ms-1" style="padding: 0.35rem 0.5rem; font-size: 0.7rem;">
+                                ${item.best_alternative.shape}
+                            </span>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            <strong>Cost:</strong> ₹${item.best_alternative.predicted_cost.toFixed(2)} • 
+                            <strong>CO₂:</strong> ${item.best_alternative.predicted_co2.toFixed(2)}
+                        </small>
+                    </td>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div class="d-flex justify-content-center">
+                            <div class="${costClass} fw-bold text-center" style="background: ${costBg}; padding: 0.5rem; border-radius: 6px; font-size: 0.95rem; min-width: 90px; width: 90px;">
+                                ${costIcon} ₹${Math.abs(costSavings).toFixed(2)}
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #f3f4f6;">
+                        <div class="d-flex justify-content-center">
+                            <div class="${co2Class} fw-bold text-center" style="background: ${co2Bg}; padding: 0.5rem; border-radius: 6px; font-size: 0.95rem; min-width: 90px; width: 90px;">
+                                ${co2Icon} ${Math.abs(co2Reduction).toFixed(2)}
                             </div>
                         </div>
                     </td>
@@ -2756,6 +2859,13 @@ async function loadHistory() {
                     </tbody>
                 </table>
             </div>
+            
+            <div style="padding: 0.875rem; background: #f8f9fa; border-top: 1px solid #e9ecef; text-align: center;">
+                <small class="text-muted" style="font-size: 0.8rem;">
+                    <i class="bi bi-info-circle me-1"></i>
+                    All costs and CO₂ scores are ML-predicted values • Showing best alternative only
+                </small>
+            </div>
         `;
         
         historyList.innerHTML = html;
@@ -2763,29 +2873,90 @@ async function loadHistory() {
     } catch (e) {
         console.error('History error:', e);
         historyList.innerHTML = `
-            <div class="alert alert-danger">
+            <div class="alert alert-danger m-4">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 Failed to load history. Please try again.
             </div>
         `;
+        globalHistoryData = [];
     }
 }
 
-function toggleHistoryDetails(recordId) {
-    const detailsRow = document.getElementById(`details-${recordId}`);
-    const chevron = document.getElementById(`chevron-${recordId}`);
+// ============================================================================
+// FILTER HISTORY FUNCTION - FIXED
+// ============================================================================
+function filterHistory() {
+    const filter = document.getElementById('historyFilter').value;
+    const rows = document.querySelectorAll('.history-row');
     
-    if (detailsRow.style.display === 'none') {
-        detailsRow.style.display = 'table-row';
-        chevron.classList.remove('bi-chevron-right');
-        chevron.classList.add('bi-chevron-down');
-        chevron.style.transform = 'rotate(90deg)';
-    } else {
-        detailsRow.style.display = 'none';
-        chevron.classList.remove('bi-chevron-down');
-        chevron.classList.add('bi-chevron-right');
-        chevron.style.transform = 'rotate(0deg)';
-    }
+    rows.forEach(row => {
+        const costSavings = parseFloat(row.getAttribute('data-cost-savings'));
+        const co2Reduction = parseFloat(row.getAttribute('data-co2-reduction'));
+        const date = new Date(row.getAttribute('data-date'));
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        let show = true;
+        
+        switch(filter) {
+            case 'savings':
+                show = costSavings > 0;
+                break;
+            case 'reduction':
+                show = co2Reduction > 0;
+                break;
+            case 'recent':
+                show = date >= thirtyDaysAgo;
+                break;
+            case 'all':
+            default:
+                show = true;
+                break;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+// ============================================================================
+// SORT HISTORY FUNCTION - FIXED
+// ============================================================================
+function sortHistory() {
+    const sortBy = document.getElementById('historySort').value;
+    const tbody = document.getElementById('historyTableBody');
+    const rows = Array.from(tbody.querySelectorAll('.history-row'));
+    
+    rows.sort((a, b) => {
+        const aData = {
+            cost: parseFloat(a.getAttribute('data-cost-savings')),
+            co2: parseFloat(a.getAttribute('data-co2-reduction')),
+            date: new Date(a.getAttribute('data-date'))
+        };
+        const bData = {
+            cost: parseFloat(b.getAttribute('data-cost-savings')),
+            co2: parseFloat(b.getAttribute('data-co2-reduction')),
+            date: new Date(b.getAttribute('data-date'))
+        };
+        
+        switch(sortBy) {
+            case 'date_desc':
+                return bData.date - aData.date;
+            case 'date_asc':
+                return aData.date - bData.date;
+            case 'cost_desc':
+                return bData.cost - aData.cost;
+            case 'co2_desc':
+                return bData.co2 - aData.co2;
+            default:
+                return 0;
+        }
+    });
+    
+    // Clear and re-append sorted rows
+    tbody.innerHTML = '';
+    rows.forEach(row => {
+        tbody.appendChild(row);
+    });
 }
 
 async function loadCharts() {
@@ -3095,73 +3266,246 @@ function downloadBulkResults() {
 
 async function exportAnalyticsExcel() {
     try {
-        const res = await fetch(`${API}/analytics/user`, {
+        // Fetch complete history data for export
+        const res = await fetch(`${API}/history`, {
             credentials: 'include'
         });
         
         if (!res.ok) {
-            alert('Failed to fetch analytics data');
+            alert('Failed to fetch data for export');
             return;
         }
         
         const data = await res.json();
+        const historyData = data.history || [];
         
-        // Create professional CSV
-        let csv = '\uFEFF'; // BOM for Excel
-        csv += 'EcoPackAI Analytics Report\n';
-        csv += `Generated,${new Date().toLocaleString('en-IN')}\n`;
+        if (historyData.length === 0) {
+            alert('No data available to export');
+            return;
+        }
+        
+        // Create professional Excel-ready CSV
+        let csv = '\uFEFF'; // BOM for Excel compatibility
+        
+        // ============================================
+        // HEADER SECTION
+        // ============================================
+        csv += 'EcoPackAI - Business Intelligence Analytics Report\n';
+        csv += `Report Generated,${new Date().toLocaleString('en-IN', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })}\n`;
         csv += `Report ID,RPT-${Date.now()}\n`;
+        csv += `Total Records,${historyData.length}\n`;
         csv += `Status,Active\n\n`;
+        
+        // ============================================
+        // EXECUTIVE SUMMARY
+        // ============================================
+        const totalCostSavings = historyData.reduce((sum, item) => sum + (item.total_cost_savings || 0), 0);
+        const totalCo2Reduction = historyData.reduce((sum, item) => sum + (item.total_co2_reduction || 0), 0);
+        const avgCostSavings = historyData.length > 0 ? totalCostSavings / historyData.length : 0;
+        const avgCo2Reduction = historyData.length > 0 ? totalCo2Reduction / historyData.length : 0;
+        const optimalCount = historyData.filter(item => 
+            (item.total_cost_savings || 0) >= 0 && (item.total_co2_reduction || 0) >= 0
+        ).length;
         
         csv += 'EXECUTIVE SUMMARY\n';
         csv += 'Metric,Value\n';
-        csv += `Total Recommendations,${data.analytics?.total_recommendations || 0}\n`;
-        csv += `Total Cost Savings (₹),${parseFloat(data.analytics?.total_cost_savings || 0).toFixed(2)}\n`;
-        csv += `Total CO₂ Reduction,${parseFloat(data.analytics?.total_co2_reduction || 0).toFixed(2)}\n`;
-        csv += `Sustainability Score,95%\n\n`;
+        csv += `Total Recommendations,${historyData.length}\n`;
+        csv += `Total Cost Savings (₹),${totalCostSavings.toFixed(2)}\n`;
+        csv += `Total CO₂ Reduction,${totalCo2Reduction.toFixed(2)}\n`;
+        csv += `Average Cost Savings per Recommendation (₹),${avgCostSavings.toFixed(2)}\n`;
+        csv += `Average CO₂ Reduction per Recommendation,${avgCo2Reduction.toFixed(2)}\n`;
+        csv += `Optimal Recommendations,${optimalCount}\n`;
+        csv += `Success Rate (%),${historyData.length > 0 ? ((optimalCount / historyData.length) * 100).toFixed(1) : 0}\n`;
+        csv += `Sustainability Score (%),95\n\n`;
         
-        csv += 'RECENT RECOMMENDATIONS HISTORY\n';
-        csv += 'Date,Cost Savings (₹),CO₂ Reduction,Status\n';
+        // ============================================
+        // COMPLETE RECOMMENDATIONS DATA
+        // ============================================
+        csv += 'DETAILED RECOMMENDATIONS HISTORY\n';
         
-        (data.recent || []).slice(0, 20).forEach(rec => {
-            const date = new Date(rec.created_at).toLocaleDateString('en-IN');
-            const cost = parseFloat(rec.cost_savings || 0).toFixed(2);
-            const co2 = parseFloat(rec.co2_reduction || 0).toFixed(2);
-            csv += `${date},${cost},${co2},Success\n`;
+        // Professional, clean headers (no "Input" prefix)
+        csv += 'Record ID,Date & Time,';
+        csv += 'Material,Shape,Strength,Food Category,Recycling Type,';
+        csv += 'Product Quantity (g),Package Weight (g),Weight Capacity (g),Number of Units,Recyclability (%),';
+        csv += 'Current Cost (₹),Current CO₂ Score,';
+        csv += 'Recommended Material,Recommended Shape,Recommended Strength,';
+        csv += 'Recommended Cost (₹),Recommended CO₂ Score,';
+        csv += 'Cost Savings (₹),CO₂ Reduction,Improvement Score,Performance Status\n';
+        
+        // Helper function to handle N/A values
+        const formatValue = (value, defaultValue = '') => {
+            if (value === null || value === undefined || value === 'N/A' || value === '') {
+                return defaultValue || '';
+            }
+            return value;
+        };
+        
+        // Data rows
+        historyData.forEach(item => {
+            const date = new Date(item.created_at).toLocaleString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+            
+            const p = item.product;
+            const c = item.current;
+            const b = item.best_alternative;
+            const costSavings = item.total_cost_savings || 0;
+            const co2Reduction = item.total_co2_reduction || 0;
+            const status = (costSavings >= 0 && co2Reduction >= 0) ? 'Optimal' : 'Review Required';
+            
+            // Input data - clean values
+            csv += `REC-${item.id},"${date}",`;
+            csv += `"${formatValue(p.material, 'Not Specified')}",`;
+            csv += `"${formatValue(p.shape, 'Not Specified')}",`;
+            csv += `"${formatValue(p.strength, 'Medium')}",`;
+            csv += `"${formatValue(p.food_group, 'Not Specified')}",`;
+            csv += `"${formatValue(p.recycling, 'Not Specified')}",`;
+            csv += `${formatValue(p.product_quantity, '')},`;
+            csv += `${formatValue(p.weight_measured, '')},`;
+            csv += `${formatValue(p.weight_capacity, '')},`;
+            csv += `${formatValue(p.number_of_units, 1)},`;
+            csv += `${formatValue(p.recyclability_percent, '')},`;
+            
+            // Current packaging
+            csv += `${c.cost.toFixed(2)},${c.co2.toFixed(2)},`;
+            
+            // Best alternative
+            csv += `"${formatValue(b.material, 'Not Specified')}",`;
+            csv += `"${formatValue(b.shape, 'Not Specified')}",`;
+            csv += `"${formatValue(b.strength, 'Medium')}",`;
+            csv += `${b.predicted_cost.toFixed(2)},${b.predicted_co2.toFixed(2)},`;
+            
+            // Impact metrics
+            csv += `${costSavings.toFixed(2)},`;
+            csv += `${co2Reduction.toFixed(2)},`;
+            csv += `${formatValue(b.improvement_score ? b.improvement_score.toFixed(2) : '', '')},`;
+            csv += `"${status}"\n`;
         });
         
-        csv += '\n';
-        csv += 'PERFORMANCE METRICS\n';
-        csv += 'Metric,Current Value,Target,Performance Status\n';
+        // ============================================
+        // ALL ALTERNATIVES ANALYSIS
+        // ============================================
+        csv += '\n\nALL ALTERNATIVES DETAILED ANALYSIS\n';
+        csv += 'Record ID,Rank,Material,Shape,Strength,Food Category,';
+        csv += 'Package Weight (g),Weight Capacity (g),Recyclability (%),';
+        csv += 'Predicted Cost (₹),Predicted CO₂ Score,Cost Savings (₹),CO₂ Reduction,Improvement Score\n';
         
-        const totalRecs = data.analytics?.total_recommendations || 1;
-        const avgCost = parseFloat(data.analytics?.total_cost_savings || 0) / Math.max(totalRecs, 1);
-        const avgCO2 = parseFloat(data.analytics?.total_co2_reduction || 0) / Math.max(totalRecs, 1);
+        historyData.forEach(item => {
+            item.all_recommendations.forEach((rec, idx) => {
+                csv += `REC-${item.id},${idx + 1},`;
+                csv += `"${formatValue(rec.material, 'Not Specified')}",`;
+                csv += `"${formatValue(rec.shape, 'Not Specified')}",`;
+                csv += `"${formatValue(rec.strength, 'Medium')}",`;
+                csv += `"${formatValue(rec.food_group || item.product.food_group, 'Not Specified')}",`;
+                csv += `${formatValue(rec.weight_measured || item.product.weight_measured, '')},`;
+                csv += `${formatValue(rec.weight_capacity || item.product.weight_capacity, '')},`;
+                csv += `${formatValue(rec.recyclability_percent || item.product.recyclability_percent, '')},`;
+                csv += `${(rec.predicted_cost || 0).toFixed(2)},`;
+                csv += `${(rec.predicted_co2 || 0).toFixed(2)},`;
+                csv += `${(rec.cost_savings || 0).toFixed(2)},`;
+                csv += `${(rec.co2_reduction || 0).toFixed(2)},`;
+                csv += `${formatValue(rec.improvement_score ? rec.improvement_score.toFixed(2) : '', '')}\n`;
+            });
+        });
         
-        csv += `Average Cost Savings (₹),${avgCost.toFixed(2)},250+,On Track\n`;
-        csv += `Average CO₂ Reduction,${avgCO2.toFixed(2)},50+,Excellent\n`;
-        csv += `Total Recommendations,${totalRecs},10+/month,Active\n`;
-        csv += `Sustainability Score,95%,90%+,Achieved\n`;
+        // ============================================
+        // PERFORMANCE METRICS
+        // ============================================
+        csv += '\n\nPERFORMANCE SCORECARD\n';
+        csv += 'Metric,Current Value,Target,Status\n';
+        csv += `Average Cost Savings (₹),${avgCostSavings.toFixed(2)},250+,${avgCostSavings >= 250 ? 'On Track' : 'Below Target'}\n`;
+        csv += `Average CO₂ Reduction,${avgCo2Reduction.toFixed(2)},50+,${avgCo2Reduction >= 50 ? 'Excellent' : 'Good'}\n`;
+        csv += `Total Recommendations,${historyData.length},10+ per month,Active\n`;
+        csv += `Sustainability Score (%),95,90+,Achieved\n`;
         
-        // Download
+        // ============================================
+        // MATERIAL INSIGHTS
+        // ============================================
+        csv += '\n\nMATERIAL USAGE ANALYSIS\n';
+        csv += 'Material,Frequency,Average Cost (₹),Average CO₂ Score\n';
+        
+        const materialStats = {};
+        historyData.forEach(item => {
+            const mat = formatValue(item.product.material, 'Not Specified');
+            if (!materialStats[mat]) {
+                materialStats[mat] = { count: 0, totalCost: 0, totalCo2: 0 };
+            }
+            materialStats[mat].count++;
+            materialStats[mat].totalCost += item.current.cost;
+            materialStats[mat].totalCo2 += item.current.co2;
+        });
+        
+        Object.entries(materialStats)
+            .sort((a, b) => b[1].count - a[1].count)
+            .forEach(([material, stats]) => {
+                csv += `"${material}",${stats.count},${(stats.totalCost / stats.count).toFixed(2)},${(stats.totalCo2 / stats.count).toFixed(2)}\n`;
+            });
+        
+        // ============================================
+        // RECOMMENDATIONS BREAKDOWN BY STATUS
+        // ============================================
+        csv += '\n\nRECOMMENDATIONS BY PERFORMANCE STATUS\n';
+        csv += 'Status,Count,Percentage\n';
+        csv += `Optimal,${optimalCount},${historyData.length > 0 ? ((optimalCount / historyData.length) * 100).toFixed(1) : 0}%\n`;
+        csv += `Review Required,${historyData.length - optimalCount},${historyData.length > 0 ? (((historyData.length - optimalCount) / historyData.length) * 100).toFixed(1) : 0}%\n`;
+        
+        // ============================================
+        // FOOTER
+        // ============================================
+        csv += '\n\nREPORT INFORMATION\n';
+        csv += 'Generated By,EcoPackAI - Smart Packaging Intelligence Platform\n';
+        csv += 'Platform,Business Analytics Dashboard\n';
+        csv += `Export Timestamp,${new Date().toISOString()}\n`;
+        csv += 'Data Accuracy,ML-Predicted Values\n';
+        csv += 'Confidentiality,Business Intelligence Report\n';
+        
+        // Download file
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `EcoPackAI_Analytics_${new Date().toISOString().slice(0,10)}.csv`;
+        a.download = `EcoPackAI_Analytics_Report_${new Date().toISOString().slice(0,10)}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         
-        // Show success message
-        alert('Analytics report exported successfully!');
+        // Success notification
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success position-fixed';
+        alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: fadeIn 0.3s; min-width: 350px;';
+        alertDiv.innerHTML = `
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-check-circle-fill" style="font-size: 1.5rem; color: #10b981;"></i>
+                <div>
+                    <strong>Export Successful!</strong>
+                    <p class="mb-0 small">Complete analytics with ${historyData.length} records exported</p>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(alertDiv);
+        
+        setTimeout(() => {
+            alertDiv.style.animation = 'fadeOut 0.3s';
+            setTimeout(() => alertDiv.remove(), 300);
+        }, 4000);
         
     } catch (e) {
         console.error('Export error:', e);
         alert('Export failed: ' + e.message);
     }
-}
+} 
 
 function exportAnalyticsPDF() {
     const printWindow = window.open('', '_blank');
