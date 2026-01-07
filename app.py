@@ -1416,12 +1416,12 @@ def get_user_analytics(current_user_id):
         analytics = cur.fetchone()  
           
         cur.execute('''  
-            SELECT id, cost_savings, co2_reduction, created_at  
+            SELECT id, cost_savings, co2_reduction, created_at, recommendations
             FROM recommendations_history  
             WHERE user_id = %s  
             ORDER BY created_at DESC  
             LIMIT 10  
-        ''', (current_user_id,))  
+        ''', (current_user_id,))
         history = cur.fetchall()  
           
         cur.close()  
