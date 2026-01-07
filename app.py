@@ -1414,8 +1414,7 @@ def get_user_analytics(current_user_id):
           
         cur.execute('SELECT * FROM user_analytics WHERE user_id = %s', (current_user_id,))  
         analytics = cur.fetchone()  
-          
-        # ✅ Get ALL history for charts
+         
         cur.execute('''  
             SELECT 
                 id, 
