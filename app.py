@@ -1498,7 +1498,8 @@ def get_user_history(current_user_id):
                         'weight_capacity': product_details.get('weight_capacity', 0),
                         'recyclability_percent': product_details.get('recyclability_percent', 0),
                         'strength': product_details.get('strength', 'N/A'),
-                        'food_group': product_details.get('food_group', 'N/A')
+                        'food_group': product_details.get('food_group', 'N/A'),
+                        'product_quantity': product_details.get('product_quantity', 1)
                     },
                     
                     # Current packaging metrics
@@ -1514,7 +1515,8 @@ def get_user_history(current_user_id):
                         'predicted_cost': float(best_rec.get('predicted_cost', 0)) if best_rec else 0,
                         'predicted_co2': float(best_rec.get('predicted_co2', 0)) if best_rec else 0,
                         'cost_savings': float(best_rec.get('cost_savings', 0)) if best_rec else 0,
-                        'co2_reduction': float(best_rec.get('co2_reduction', 0)) if best_rec else 0
+                        'co2_reduction': float(best_rec.get('co2_reduction', 0)) if best_rec else 0,
+                        'improvement_score': float(best_rec.get('improvement_score', 0)) if best_rec else 0
                     },
                     
                     # Overall impact
@@ -1540,7 +1542,6 @@ def get_user_history(current_user_id):
         print(f"[History API] Error fetching history: {e}")
         print(f"[History API] Traceback: {traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
-  
 # ============================================================================  
 # CORRECTED: /api/materials - Returns ONLY fields models actually use 
 # ============================================================================  
