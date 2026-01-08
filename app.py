@@ -1414,29 +1414,43 @@ def get_user_analytics(current_user_id):
           
         cur.execute('SELECT * FROM user_analytics WHERE user_id = %s', (current_user_id,))  
         analytics = cur.fetchone()  
-         
+          
         cur.execute('''  
             SELECT 
-                id, 
+                id,
+                product_details,
+                current_packaging,
+                recommendations,
                 cost_savings, 
                 co2_reduction, 
-                created_at, 
-                recommendations,
-                product_details
+                created_at
             FROM recommendations_history  
             WHERE user_id = %s  
             ORDER BY created_at ASC
         ''', (current_user_id,))  
-        history = cur.fetchall()  
+        history = cur.fetchall()
+
+        # Format history data properly
+        formatted_history = []
+        for record in history:
+            formatted_history.append({
+                'id': record['id'],
+                'product_details': record['product_details'],  # Already JSONB, should be dict
+                'current_packaging': record['current_packaging'],
+                'recommendations': record['recommendations'],
+                'cost_savings': float(record['cost_savings']) if record['cost_savings'] else 0,
+                'co2_reduction': float(record['co2_reduction']) if record['co2_reduction'] else 0,
+                'created_at': record['created_at'].isoformat() if record['created_at'] else None
+            })
           
         cur.close()  
         conn.close()  
           
         return jsonify({  
             'analytics': dict(analytics) if analytics else {},  
-            'history': [dict(h) for h in history],  # ALL data
-            'recent': [dict(h) for h in history[-10:]]  # Last 10
-        }), 200  
+            'history': formatted_history,  # Use formatted data
+            'recent': formatted_history[-10:]  # Last 10
+        }), 200 
     except Exception as e:  
         return jsonify({'error': str(e)}), 500
      
