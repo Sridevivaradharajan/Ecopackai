@@ -198,497 +198,551 @@ def google_callback():
     
     return response
  
-class MLModelManager: 
-    def __init__(self): 
-        self.cost_model = None 
-        self.co2_model = None 
-        self.label_encoders = None 
-        self.cost_features = None 
-        self.co2_features = None 
-         
-        # Exact mappings from notebook 
-        self.strength_map = { 
-            'Low': 1.0, 'Medium': 2.2, 'High': 3.8, 'Very High': 5.5 
-        } 
-         
-        self.material_cost_map = { 
-            'Plastic': 1.1, 'Paper': 0.75, 'Glass': 2.3, 'Metal': 2.8, 
-            'Cardboard': 0.65, 'Wood': 1.4, 'Composite': 1.9, 'Aluminum': 3.2, 
-            'PE': 1.05, 'PP': 1.1, 'PET': 1.25, 'HDPE': 1.15, 'LDPE': 1.0, 
-            # Lowercase variants 
-            'plastic': 1.1, 'paper': 0.75, 'glass': 2.3, 'metal': 2.8, 
-            'cardboard': 0.65, 'aluminium': 3.2, 'aluminum': 3.2, 
-            'steel': 2.8, 'plastic 7': 1.1, 'unknown': 1.3 
-        } 
-         
-        self.shape_complexity = { 
-            'Box': 1.0, 'Bag': 0.75, 'Bottle': 1.2, 'Can': 1.15, 
-            'Jar': 1.3, 'Pouch': 0.85, 'Tray': 1.05, 'Tube': 1.25, 
-            'Container': 1.1, 'Wrapper': 0.8, 
-            # Lowercase variants 
-            'box': 1.0, 'bag': 0.75, 'bottle': 1.2, 'can': 1.15, 
-            'jar': 1.3, 'pouch': 0.85, 'tray': 1.05, 'tube': 1.25, 
-            'container': 1.1, 'wrapper': 0.8, 'unknown': 1.0 
-        } 
-         
-    def load_models(self): 
-        """Load all required model files""" 
-        try: 
-            print("Loading ML models...") 
-             
-            required_files = { 
-                'cost_model': 'models/final_cost_model.pkl', 
-                'co2_model': 'models/final_co2_model.pkl', 
-                'encoders': 'models/label_encoders.pkl', 
-                'cost_features': 'models/cost_features.txt', 
-                'co2_features': 'models/co2_features.txt' 
-            } 
-             
-            missing_files = [f for f in required_files.values() if not os.path.exists(f)] 
-            if missing_files: 
-                print(f"⚠️ Missing model files: {missing_files}") 
-                print("⚠️ Running in DEMO mode") 
-                return False 
-             
-            self.cost_model = joblib.load(required_files['cost_model']) 
-            self.co2_model = joblib.load(required_files['co2_model']) 
-            self.label_encoders = joblib.load(required_files['encoders']) 
-             
-            # Load feature lists - MAINTAINS ORDER 
-            with open(required_files['cost_features'], 'r') as f: 
-                self.cost_features = [line.strip() for line in f if line.strip()] 
-             
-            with open(required_files['co2_features'], 'r') as f: 
-                self.co2_features = [line.strip() for line in f if line.strip()] 
-             
-            print(f"✓ Models loaded successfully") 
-            print(f"  Cost features: {len(self.cost_features)}") 
-            print(f"  CO2 features: {len(self.co2_features)}") 
-             
-            # VALIDATION: Test feature generation 
-            return self._validate_feature_pipeline() 
-             
-        except Exception as e: 
-            print(f"✗ Error loading models: {e}") 
-            print(f"✗ Traceback: {traceback.format_exc()}") 
-            return False 
-     
-    def _validate_feature_pipeline(self): 
-        """Validate that all features can be generated""" 
-        try: 
-            print("\n[Validating Feature Pipeline]") 
-             
-            test_input = { 
-                'product_quantity': 500, 
-                'weight_measured': 50, 
-                'weight_capacity': 600, 
-                'number_of_units': 1, 
-                'recyclability_percent': 70, 
-                'material': 'plastic', 
-                'parent_material': 'plastic', 
-                'shape': 'bottle', 
-                'strength': 'Medium', 
-                'recycling': 'Recyclable', 
-                'food_group': 'fruit-juices', 
-                'categories_tags': 'fruit-juices', 
-                'countries_tags': 'france' 
-            } 
-             
-            features = self.engineer_features(test_input) 
-             
-            # Check cost features 
-            missing_cost = [f for f in self.cost_features if f not in features] 
-            if missing_cost: 
-                print(f"❌ Missing cost features ({len(missing_cost)}):") 
-                for feat in missing_cost[:10]:  # Show first 10 
-                    print(f"   - {feat}") 
-                return False 
-             
-            # Check for zero/null values in critical features 
-            zero_features = [f for f in self.cost_features if features.get(f, 0) == 0 and 'encoded' in f] 
-            if len(zero_features) > 3: 
-                print(f"⚠️ WARNING: {len(zero_features)} encoded features are zero (possible encoding issues)") 
-             
-            # Check CO2 features 
-            missing_co2 = [f for f in self.co2_features if f not in features] 
-            if missing_co2: 
-                print(f"❌ Missing CO2 features ({len(missing_co2)}):") 
-                for feat in missing_co2[:10]: 
-                    print(f"   - {feat}") 
-                return False 
-             
-            print(f"   Validation passed:") 
-            print(f"   Cost: {len(self.cost_features)} features available") 
-            print(f"   CO2: {len(self.co2_features)} features available") 
-             
-            return True 
-             
-        except Exception as e: 
-            print(f"❌ Validation failed: {e}") 
-            return False 
-     
-    def engineer_features(self, product_dict): 
-        """ 
-        COMPLETE FEATURE ENGINEERING - Matches notebook exactly 
-         
-        Generates ALL features needed by both Cost and CO2 models 
-        Returns dict with ALL 16+ unique features 
-        """ 
-        features = {} 
-         
-        # ================================================================ 
-        # STEP 1: RAW NUMERIC FEATURES (Base inputs) 
-        # ================================================================ 
-        features['product_quantity'] = float(product_dict.get('product_quantity', 500)) 
-        features['weight_measured'] = float(product_dict.get('weight_measured', 50)) 
-        features['weight_capacity'] = float(product_dict.get('weight_capacity', 600)) 
-        features['recyclability_percent'] = float(product_dict.get('recyclability_percent', 70)) 
-        features['number_of_units'] = int(product_dict.get('number_of_units', 1)) 
-         
-        # ================================================================ 
-        # STEP 2: HELPER FEATURES (Must be calculated FIRST) 
-        # ================================================================ 
-         
-        # Strength numeric mapping 
-        strength = product_dict.get('strength', 'Medium') 
-        features['strength_num'] = self.strength_map.get(strength, 2.2) 
-         
-        # Material cost factor 
-        material = product_dict.get('material', 'plastic') 
-        features['material_cost_factor'] = self.material_cost_map.get( 
-            material,  
-            self.material_cost_map.get(material.lower(), 1.3) 
-        ) 
-         
-        # Shape complexity 
-        shape = product_dict.get('shape', 'bottle') 
-        features['shape_complexity'] = self.shape_complexity.get( 
-            shape, 
-            self.shape_complexity.get(shape.lower(), 1.0) 
-        ) 
-         
-        # ================================================================ 
-        # STEP 3: CATEGORICAL ENCODINGS (Only what models actually use) 
-        # ================================================================ 
-        # ✅ ONLY encode features that are ACTUALLY in cost_features.txt / co2_features.txt 
-        # ❌ REMOVED: categories_tags, countries_tags (not used by models) 
-         
-        categorical_fields = { 
-            'food_group': product_dict.get('food_group', 'fruit-juices'), 
-            'material': material, 
-            'parent_material': product_dict.get('parent_material') or self._infer_parent_material(material), 
-            'recycling': product_dict.get('recycling', 'Recyclable'), 
-            'shape': shape, 
-            'strength': strength 
-        } 
-         
-        for field_name, value in categorical_fields.items(): 
-            encoded_name = f'{field_name}_encoded' 
-            features[encoded_name] = self._encode_categorical(value, field_name) 
-         
-        # ================================================================ 
-        # STEP 4: POLYNOMIAL FEATURES (weight transformations) 
-        # ================================================================ 
-        weight = features['weight_measured'] 
-         
-        features['weight_squared'] = weight ** 2 
-        features['weight_log'] = np.log1p(weight) 
-        features['weight_sqrt'] = np.sqrt(weight)  # ✅ ADDED - Missing for CO2 
-         
-        # ================================================================ 
-        # STEP 5: INTERACTION FEATURES 
-        # ================================================================ 
-         
-        capacity = features['weight_capacity'] 
-        material_enc = features['material_encoded'] 
-        parent_mat_enc = features['parent_material_encoded'] 
-        shape_enc = features['shape_encoded'] 
-         
-        # Weight × Capacity 
-        features['capacity_weight_ratio'] = capacity / (weight + 0.01) 
-        features['capacity_weight_prod'] = capacity * weight 
-         
-        # Material × Weight 
-        features['material_weight'] = material_enc * weight 
-        features['material_weight_sq'] = material_enc * (weight ** 2)  # ✅ ADDED - Missing for CO2 
-         
-        # Parent Material × Weight 
-        features['parent_mat_weight'] = parent_mat_enc * weight  # ✅ ADDED - Missing for CO2 
-         
-        # Shape × Weight 
-        features['shape_weight'] = shape_enc * weight  # ✅ ADDED - Missing for CO2 
-         
-        # ================================================================ 
-        # STEP 6: COST-SPECIFIC DERIVED FEATURES 
-        # ================================================================ 
-         
-        product_qty = features['product_quantity'] 
-        features['packaging_ratio'] = weight / (product_qty + 1) 
-         
-        recyc_pct = features['recyclability_percent'] 
-        features['recyclability_score'] = recyc_pct / 100 
-        features['non_recyclable_penalty'] = 100 - recyc_pct 
-         
-        # ================================================================ 
-        # VALIDATION: Ensure all critical features exist 
-        # ================================================================ 
-        required_features = [ 
-            'product_quantity', 'weight_measured', 'weight_capacity', 'recyclability_percent', 
-            'number_of_units', 'strength_num', 'material_cost_factor', 'shape_complexity', 
-            'material_encoded', 'parent_material_encoded', 'shape_encoded', 'strength_encoded', 
-            'recycling_encoded', 'food_group_encoded', 'weight_squared', 'weight_log',  
-            'weight_sqrt', 'capacity_weight_ratio', 'capacity_weight_prod', 'material_weight', 
-            'material_weight_sq', 'parent_mat_weight', 'shape_weight', 'packaging_ratio', 
-            'recyclability_score', 'non_recyclable_penalty' 
-        ] 
-         
-        missing = [f for f in required_features if f not in features] 
-        if missing: 
-            print(f"⚠️ WARNING: Missing features: {missing}") 
-         
-        return features 
-     
-    def _infer_parent_material(self, material): 
-        """Infer parent material from material name (matches notebook logic)""" 
-        material_lower = str(material).lower() 
-         
-        if material_lower in ['aluminium', 'aluminum', 'metal', 'steel']: 
-            return 'metal' 
-        elif material_lower in ['cardboard', 'paper']: 
-            return 'paper-or-cardboard' 
-        elif material_lower == 'glass': 
-            return 'glass' 
-        elif 'plastic' in material_lower: 
-            return 'plastic' 
-        else: 
-            return 'plastic'  # Default 
-     
-    def _encode_categorical(self, value, column_name): 
-        """ 
-        Encode categorical values using trained LabelEncoders 
-        CRITICAL: Handles missing values and provides fallbacks 
-        """ 
-        if column_name not in self.label_encoders: 
-            print(f"⚠️ No encoder for {column_name}, returning 0") 
-            return 0 
-         
-        encoder = self.label_encoders[column_name] 
-        available_classes = list(encoder.classes_) 
-         
-        # Try exact match 
-        if str(value) in available_classes: 
-            return int(encoder.transform([str(value)])[0]) 
-         
-        # Try lowercase match 
-        value_lower = str(value).lower().strip() 
-         
-        # Column-specific mappings (from notebook standardization) 
-        mappings = { 
-            'material': { 
-                'cardboard': 'cardboard', 'plastic': 'plastic', 'glass': 'glass', 
-                'metal': 'metal', 'aluminium': 'aluminium', 'aluminum': 'aluminium', 
-                'paper': 'paper', 'steel': 'steel', 'plastic 7': 'plastic 7', 
-                'pe': 'plastic', 'pp': 'plastic', 'pet': 'plastic', 
-                'hdpe': 'plastic', 'ldpe': 'plastic', 'unknown': 'unknown' 
-            }, 
-            'parent_material': { 
-                'glass': 'glass', 'metal': 'metal', 'plastic': 'plastic', 
-                'paper': 'paper', 'cardboard': 'paper-or-cardboard', 
-                'aluminium': 'metal', 'aluminum': 'metal', 'steel': 'metal' 
-            }, 
-            'shape': { 
-                'bottle': 'bottle', 'box': 'box', 'bag': 'bag', 'can': 'can', 
-                'jar': 'jar', 'pouch': 'pouch', 'tray': 'tray', 'tube': 'tube', 
-                'container': 'container', 'wrapper': 'wrapper', 'lid': 'lid', 
-                'cap': 'cap', 'film': 'film', 'seal': 'seal', 'label': 'label', 
-                'sleeve': 'sleeve', 'pot': 'pot', 'wrap': 'wrap' 
-            }, 
-            'strength': { 
-                'low': 'Low', 'medium': 'Medium', 'high': 'High', 'very high': 'Very High' 
-            }, 
-            'recycling': { 
-                'recyclable': 'Recyclable', 
-                'recycle': 'Recyclable', 
-                'not recyclable': 'Not Recyclable', 
-                'compost': 'Compost', 
-                'reusable': 'Reusable', 
-                'deposit return': 'Deposit Return', 
-                'return to store': 'Return to Store' 
-            }, 
-            'food_group': { 
-                'fruit-juices': 'fruit-juices', 
-                'biscuits-and-cakes': 'biscuits-and-cakes', 
-                'dairy-desserts': 'dairy-desserts', 
-                'bread': 'bread', 
-                'cheese': 'cheese' 
-            } 
-        } 
-         
-        # Apply mapping 
-        if column_name in mappings: 
-            mapped = mappings[column_name].get(value_lower) 
-            if mapped and mapped in available_classes: 
-                return int(encoder.transform([mapped])[0]) 
-         
-        # Try case-insensitive match 
-        for cls in available_classes: 
-            if str(cls).lower() == value_lower: 
-                return int(encoder.transform([str(cls)])[0]) 
-         
-        # Fallback to most common value 
-        fallback_map = { 
-            'material': 'plastic', 
-            'parent_material': 'plastic', 
-            'shape': 'bottle', 
-            'strength': 'Medium', 
-            'recycling': 'Recyclable', 
-            'food_group': 'fruit-juices', 
-            'categories_tags': available_classes[0] if available_classes else 'unknown',  # Use first encoded class 
-            'countries_tags': 'france' 
-        } 
-         
-        fallback = fallback_map.get(column_name, available_classes[0] if available_classes else 'Unknown') 
-        if fallback in available_classes: 
-            print(f"⚠️ Using fallback '{fallback}' for {column_name}='{value}'") 
-            return int(encoder.transform([fallback])[0]) 
-         
-        print(f"⚠️ Could not encode {column_name}='{value}', returning 0") 
-        return 0 
-     
-    def predict(self, product_dict): 
-        """ 
-        Generate predictions for cost and CO2 
-         
-        CRITICAL: Features are extracted in EXACT order from cost_features.txt / co2_features.txt 
-         
-        Returns: 
-            cost_pred (float): Predicted packaging cost 
-            co2_pred (float): Predicted CO2 impact 
-            features (dict): All engineered features 
-        """ 
-        try: 
-            if self.cost_model is None or self.co2_model is None: 
-                # Fallback prediction 
-                weight = float(product_dict.get('weight_measured', 50)) 
-                material = product_dict.get('material', 'plastic').lower() 
-                 
-                base_cost = self.material_cost_map.get(material, 1.5) 
-                cost_pred = base_cost * weight * 0.02 
-                co2_pred = weight * 0.5 
-                 
-                print("⚠️ Using fallback prediction (models not loaded)") 
-                return cost_pred, co2_pred, {} 
-             
-            # ================================================================ 
-            # STEP 1: Generate ALL features 
-            # ================================================================ 
-            features = self.engineer_features(product_dict) 
-             
-            # ================================================================ 
-            # STEP 2: COST PREDICTION - Maintain exact feature order 
-            # ================================================================ 
-            X_cost = [] 
-            missing_cost_features = [] 
-             
-            for feat in self.cost_features: 
-                if feat in features: 
-                    X_cost.append(features[feat]) 
-                else: 
-                    missing_cost_features.append(feat) 
-                    # Use intelligent defaults instead of 0 
-                    if 'encoded' in feat: 
-                        X_cost.append(0)  # Encoded features default to 0 
-                    elif 'ratio' in feat or 'percent' in feat: 
-                        X_cost.append(1.0)  # Ratios default to 1 
-                    else: 
-                        X_cost.append(0)  # Numeric features default to 0 
-             
-            if missing_cost_features: 
-                print(f"⚠️ CRITICAL: Missing {len(missing_cost_features)} cost features:") 
-                for feat in missing_cost_features[:5]: 
-                    print(f"   - {feat}") 
-                print(f"\n❌ This will cause prediction errors!") 
-             
-            X_cost = np.array(X_cost).reshape(1, -1) 
-            cost_pred = float(self.cost_model.predict(X_cost)[0]) 
-             
-            # ================================================================ 
-            # STEP 3: CO2 PREDICTION - Maintain exact feature order 
-            # ================================================================ 
-            X_co2 = [] 
-            missing_co2_features = [] 
-             
-            for feat in self.co2_features: 
-                if feat in features: 
-                    X_co2.append(features[feat]) 
-                else: 
-                    missing_co2_features.append(feat) 
-                    if 'encoded' in feat: 
-                        X_co2.append(0) 
-                    elif 'ratio' in feat or 'percent' in feat: 
-                        X_co2.append(1.0) 
-                    else: 
-                        X_co2.append(0) 
-             
-            if missing_co2_features: 
-                print(f"⚠️ CRITICAL: Missing {len(missing_co2_features)} CO2 features:") 
-                for feat in missing_co2_features[:5]: 
-                    print(f"   - {feat}") 
-                print(f"\n❌ This will cause prediction errors!") 
-             
-            X_co2 = np.array(X_co2).reshape(1, -1) 
-             
-            # CRITICAL: Model was trained on log-transformed CO2 values 
-            co2_pred_log = self.co2_model.predict(X_co2)[0] 
-            co2_pred = float(np.expm1(co2_pred_log))  # Inverse of log1p 
-             
-            # ================================================================ 
-            # VALIDATION: Check if predictions are reasonable 
+class MLModelManager:
+    """
+    Complete ML model manager with robust feature engineering and validation
+    
+    Features:
+    - Exact feature order preservation from training
+    - Robust label encoding with fuzzy matching
+    - Comprehensive validation pipeline
+    - Detailed error reporting
+    """
+    
+    def __init__(self):
+        self.cost_model = None
+        self.co2_model = None
+        self.label_encoders = None
+        self.cost_features = None
+        self.co2_features = None
+        
+        # Helper mappings (from notebook)
+        self.strength_map = {
+            'Low': 1.0, 'Medium': 2.2, 'High': 3.8, 'Very High': 5.5
+        }
+        
+        self.material_cost_map = {
+            'plastic': 1.1, 'paper': 0.75, 'glass': 2.3, 'metal': 2.8,
+            'cardboard': 0.65, 'wood': 1.4, 'composite': 1.9,
+            'aluminium': 3.2, 'aluminum': 3.2, 'steel': 2.8,
+            'pe': 1.05, 'pp': 1.1, 'pet': 1.25, 'hdpe': 1.15, 'ldpe': 1.0,
+            'plastic 7': 1.1, 'unknown': 1.3
+        }
+        
+        self.shape_complexity = {
+            'box': 1.0, 'bag': 0.75, 'bottle': 1.2, 'can': 1.15,
+            'jar': 1.3, 'pouch': 0.85, 'tray': 1.05, 'tube': 1.25,
+            'container': 1.1, 'wrapper': 0.8, 'packaging': 1.0,
+            'lid': 0.6, 'cap': 0.6, 'seal': 0.5, 'film': 0.7,
+            'unknown': 1.0
+        }
+    
+    def load_models(self):
+        """Load all model files with validation"""
+        try:
+            print("="*80)
+            print("LOADING ML MODELS")
+            print("="*80)
+            
+            model_dir = Path('models')
+            required_files = {
+                'cost_model': model_dir / 'final_cost_model.pkl',
+                'co2_model': model_dir / 'final_co2_model.pkl',
+                'encoders': model_dir / 'label_encoders.pkl',
+                'cost_features': model_dir / 'cost_features.txt',
+                'co2_features': model_dir / 'co2_features.txt'
+            }
+            
+            # Check file existence
+            missing = [str(f) for f in required_files.values() if not f.exists()]
+            if missing:
+                print(f"[ERROR] Missing files: {missing}")
+                print("[WARNING] Running in DEMO mode")
+                return False
+            
+            # Load models
+            self.cost_model = joblib.load(required_files['cost_model'])
+            self.co2_model = joblib.load(required_files['co2_model'])
+            self.label_encoders = joblib.load(required_files['encoders'])
+            
+            # Load feature lists (MAINTAINS ORDER)
+            with open(required_files['cost_features'], 'r') as f:
+                self.cost_features = [line.strip() for line in f if line.strip()]
+            
+            with open(required_files['co2_features'], 'r') as f:
+                self.co2_features = [line.strip() for line in f if line.strip()]
+            
+            print(f"[OK] Cost model loaded: {len(self.cost_features)} features")
+            print(f"[OK] CO2 model loaded: {len(self.co2_features)} features")
+            print(f"[OK] Label encoders: {len(self.label_encoders)} categories")
+            
+            # CRITICAL: Validate pipeline
+            return self._validate_feature_pipeline()
+            
+        except Exception as e:
+            print(f"[ERROR] Error loading models: {e}")
+            traceback.print_exc()
+            return False
+    
+    def _validate_feature_pipeline(self):
+        """
+        Comprehensive validation of feature generation pipeline
+        
+        Tests:
+        1. All features can be generated
+        2. Feature order matches training
+        3. Encoders work correctly
+        4. Predictions are reasonable
+        """
+        try:
+            print("\n" + "="*80)
+            print("VALIDATING FEATURE PIPELINE")
+            print("="*80)
+            
+            # Test input (typical product)
+            test_input = {
+                'product_quantity': 500,
+                'weight_measured': 50,
+                'weight_capacity': 600,
+                'number_of_units': 1,
+                'recyclability_percent': 70,
+                'material': 'plastic',
+                'parent_material': 'plastic',
+                'shape': 'bottle',
+                'strength': 'Medium',
+                'recycling': 'Recyclable',
+                'food_group': 'fruit-juices'
+            }
+            
+            print("\n[Test 1] Feature Generation")
+            features = self.engineer_features(test_input)
+            print(f"  [OK] Generated {len(features)} features")
+            
+            # Validate cost features
+            print("\n[Test 2] Cost Feature Validation")
+            missing_cost = [f for f in self.cost_features if f not in features]
+            if missing_cost:
+                print(f"  [CRITICAL] Missing {len(missing_cost)} cost features:")
+                for feat in missing_cost[:10]:
+                    print(f"    - {feat}")
+                return False
+            print(f"  [OK] All {len(self.cost_features)} cost features present")
+            
+            # Validate CO2 features
+            print("\n[Test 3] CO2 Feature Validation")
+            missing_co2 = [f for f in self.co2_features if f not in features]
+            if missing_co2:
+                print(f"  [CRITICAL] Missing {len(missing_co2)} CO2 features:")
+                for feat in missing_co2[:10]:
+                    print(f"    - {feat}")
+                return False
+            print(f"  [OK] All {len(self.co2_features)} CO2 features present")
+            
+            # Validate feature order
+            print("\n[Test 4] Feature Order Verification")
+            X_cost = np.array([features[f] for f in self.cost_features]).reshape(1, -1)
+            X_co2 = np.array([features[f] for f in self.co2_features]).reshape(1, -1)
+            print(f"  [OK] Cost array shape: {X_cost.shape}")
+            print(f"  [OK] CO2 array shape: {X_co2.shape}")
+            
+            # Test predictions
+            print("\n[Test 5] Prediction Test")
+            cost_pred = float(self.cost_model.predict(X_cost)[0])
+            co2_log = self.co2_model.predict(X_co2)[0]
+            co2_pred = float(np.expm1(co2_log))
+            
+            print(f"  [RESULT] Cost: Rs.{cost_pred:.2f}")
+            print(f"  [RESULT] CO2: {co2_pred:.2f}")
+            
+            # Sanity checks
+            if cost_pred <= 0 or cost_pred > 10000:
+                print(f"  [WARNING] Unusual cost prediction: Rs.{cost_pred:.2f}")
+            if co2_pred <= 0 or co2_pred > 1000:
+                print(f"  [WARNING] Unusual CO2 prediction: {co2_pred:.2f}")
+            
+            print("\n" + "="*80)
+            print("VALIDATION PASSED")
+            print("="*80)
+            return True
+            
+        except Exception as e:
+            print(f"\n[CRITICAL] Validation failed: {e}")
+            traceback.print_exc()
+            return False
+    
+    def _encode_categorical(self, value, column_name):
+        """
+        Encode categorical values with ROBUST fallback handling
+        
+        Priority:
+        1. Exact match (case-sensitive)
+        2. Case-insensitive match
+        3. Fuzzy match (e.g., "aluminum" -> "aluminium")
+        4. Domain-specific fallback
+        5. Most common value (last resort)
+        """
+        if column_name not in self.label_encoders:
+            print(f"[WARNING] No encoder for {column_name}, returning 0")
+            return 0
+        
+        encoder = self.label_encoders[column_name]
+        available_classes = list(encoder.classes_)
+        
+        # Convert to string
+        value_str = str(value).strip()
+        
+        # STEP 1: Exact Match (Case-Sensitive)
+        if value_str in available_classes:
+            return int(encoder.transform([value_str])[0])
+        
+        # STEP 2: Case-Insensitive Match
+        value_lower = value_str.lower()
+        for cls in available_classes:
+            if str(cls).lower() == value_lower:
+                return int(encoder.transform([str(cls)])[0])
+        
+        # STEP 3: Fuzzy Mappings (Domain-Specific)
+        fuzzy_mappings = {
+            'material': {
+                'aluminum': 'aluminium',
+                'carton': 'cardboard',
+                'paperboard': 'cardboard',
+                'tin': 'metal',
+                'iron': 'metal',
+                'pe': 'plastic',
+                'pp': 'plastic',
+                'pet': 'plastic',
+                'hdpe': 'plastic',
+                'ldpe': 'plastic',
+                'polypropylene': 'plastic',
+                'polyethylene': 'plastic',
+                'pvc': 'plastic 7'
+            },
+            'parent_material': {
+                'aluminum': 'metal',
+                'aluminium': 'metal',
+                'steel': 'metal',
+                'tin': 'metal',
+                'iron': 'metal',
+                'cardboard': 'paper-or-cardboard',
+                'paperboard': 'paper-or-cardboard',
+                'paper': 'paper-or-cardboard',
+                'carton': 'paper-or-cardboard'
+            },
+            'shape': {
+                'package': 'packaging',
+                'pack': 'packaging',
+                'wrapping': 'wrapper',
+                'covering': 'wrapper',
+                'top': 'cap',
+                'cover': 'lid',
+                'basket': 'container',
+                'dish': 'tray'
+            },
+            'strength': {
+                'weak': 'Low',
+                'low': 'Low',
+                'strong': 'High',
+                'high': 'High',
+                'normal': 'Medium',
+                'medium': 'Medium',
+                'average': 'Medium',
+                'very strong': 'Very High',
+                'very high': 'Very High',
+                'extra strong': 'Very High'
+            },
+            'recycling': {
+                'yes': 'Recyclable',
+                'no': 'Not Recyclable',
+                'biodegradable': 'Compost',
+                'compostable': 'Compost',
+                'returnable': 'Return to Store',
+                'deposit': 'Deposit Return',
+                'reuse': 'Reusable'
+            },
+            'food_group': {
+                'juice': 'fruit-juices',
+                'juices': 'fruit-juices',
+                'biscuit': 'biscuits-and-cakes',
+                'cake': 'biscuits-and-cakes',
+                'dessert': 'dairy-desserts',
+                'meat': 'meat-other-than-poultry',
+                'chicken': 'poultry',
+                'fish': 'fish-and-seafood',
+                'vegetable': 'vegetables',
+                'fruit': 'fruits'
+            }
+        }
+        
+        if column_name in fuzzy_mappings:
+            mapped = fuzzy_mappings[column_name].get(value_lower)
+            if mapped and mapped in available_classes:
+                print(f"[INFO] Fuzzy match: {column_name}='{value}' -> '{mapped}'")
+                return int(encoder.transform([mapped])[0])
+        
+        # STEP 4: Domain Fallbacks (most common safe values)
+        fallback_map = {
+            'material': 'plastic',
+            'parent_material': 'plastic',
+            'shape': 'bottle',
+            'strength': 'Medium',
+            'recycling': 'Recyclable',
+            'food_group': 'fruit-juices'
+        }
+        
+        fallback = fallback_map.get(column_name)
+        if fallback and fallback in available_classes:
+            print(f"[WARNING] Using fallback for {column_name}='{value}' -> '{fallback}'")
+            return int(encoder.transform([fallback])[0])
+        
+        # STEP 5: First available class (last resort)
+        if available_classes:
+            print(f"[ERROR] Could not encode {column_name}='{value}', using first class: '{available_classes[0]}'")
+            return int(encoder.transform([available_classes[0]])[0])
+        
+        print(f"[CRITICAL] No classes available for {column_name}, returning 0")
+        return 0
+    
+    def _infer_parent_material(self, material):
+        """Infer parent material from material name"""
+        material_lower = str(material).lower()
+        
+        if material_lower in ['aluminium', 'aluminum', 'metal', 'steel', 'tin', 'iron']:
+            return 'metal'
+        elif material_lower in ['cardboard', 'paper', 'paperboard', 'carton']:
+            return 'paper-or-cardboard'
+        elif material_lower == 'glass':
+            return 'glass'
+        elif 'plastic' in material_lower or material_lower in ['pe', 'pp', 'pet', 'hdpe', 'ldpe', 'pvc']:
+            return 'plastic'
+        else:
+            return 'unknown'
+    
+    def engineer_features(self, product_dict):
+        """
+        COMPLETE FEATURE ENGINEERING - Matches notebook exactly
+        
+        Generates ALL features needed by both Cost and CO2 models
+        Returns dict with ALL required features in correct format
+        """
+        features = {}
+        
+        # ================================================================
+        # STEP 1: RAW NUMERIC FEATURES
+        # ================================================================
+        features['product_quantity'] = float(product_dict.get('product_quantity', 500))
+        features['weight_measured'] = float(product_dict.get('weight_measured', 50))
+        features['weight_capacity'] = float(product_dict.get('weight_capacity', 600))
+        features['recyclability_percent'] = float(product_dict.get('recyclability_percent', 70))
+        features['number_of_units'] = int(product_dict.get('number_of_units', 1))
+        
+        # ================================================================
+        # STEP 2: HELPER FEATURES (Must be calculated FIRST)
+        # ================================================================
+        
+        # Strength numeric mapping
+        strength = product_dict.get('strength', 'Medium')
+        features['strength_num'] = self.strength_map.get(strength, 2.2)
+        
+        # Material cost factor (case-insensitive lookup)
+        material = product_dict.get('material', 'plastic')
+        material_lower = material.lower()
+        features['material_cost_factor'] = self.material_cost_map.get(
+            material_lower,
+            self.material_cost_map.get(material, 1.3)
+        )
+        
+        # Shape complexity (case-insensitive lookup)
+        shape = product_dict.get('shape', 'bottle')
+        shape_lower = shape.lower()
+        features['shape_complexity'] = self.shape_complexity.get(
+            shape_lower,
+            self.shape_complexity.get(shape, 1.0)
+        )
+        
+        # ================================================================
+        # STEP 3: CATEGORICAL ENCODINGS
+        # ================================================================
+        
+        categorical_fields = {
+            'food_group': product_dict.get('food_group', 'fruit-juices'),
+            'material': material,
+            'parent_material': product_dict.get('parent_material') or self._infer_parent_material(material),
+            'recycling': product_dict.get('recycling', 'Recyclable'),
+            'shape': shape,
+            'strength': strength
+        }
+        
+        for field_name, value in categorical_fields.items():
+            encoded_name = f'{field_name}_encoded'
+            features[encoded_name] = self._encode_categorical(value, field_name)
+        
+        # ================================================================
+        # STEP 4: POLYNOMIAL FEATURES (weight transformations)
+        # ================================================================
+        weight = features['weight_measured']
+        
+        features['weight_squared'] = weight ** 2
+        features['weight_log'] = np.log1p(weight)
+        features['weight_sqrt'] = np.sqrt(weight)
+        
+        # ================================================================
+        # STEP 5: INTERACTION FEATURES
+        # ================================================================
+        
+        capacity = features['weight_capacity']
+        material_enc = features['material_encoded']
+        parent_mat_enc = features['parent_material_encoded']
+        shape_enc = features['shape_encoded']
+        
+        # Weight x Capacity
+        features['capacity_weight_ratio'] = capacity / (weight + 0.01)
+        features['capacity_weight_prod'] = capacity * weight
+        
+        # Material x Weight
+        features['material_weight'] = material_enc * weight
+        features['material_weight_sq'] = material_enc * (weight ** 2)
+        
+        # Parent Material x Weight
+        features['parent_mat_weight'] = parent_mat_enc * weight
+        
+        # Shape x Weight
+        features['shape_weight'] = shape_enc * weight
+        
+        # ================================================================
+        # STEP 6: COST-SPECIFIC DERIVED FEATURES
+        # ================================================================
+        
+        product_qty = features['product_quantity']
+        features['packaging_ratio'] = weight / (product_qty + 1)
+        
+        recyc_pct = features['recyclability_percent']
+        features['recyclability_score'] = recyc_pct / 100
+        features['non_recyclable_penalty'] = 100 - recyc_pct
+        
+        return features
+    
+    def predict(self, product_dict):
+        """
+        Generate predictions for cost and CO2
+        
+        CRITICAL: Features are extracted in EXACT order from cost_features.txt / co2_features.txt
+        
+        Returns:
+            cost_pred (float): Predicted packaging cost
+            co2_pred (float): Predicted CO2 impact
+            features (dict): All engineered features
+        """
+        try:
+            if self.cost_model is None or self.co2_model is None:
+                # Fallback prediction
+                weight = float(product_dict.get('weight_measured', 50))
+                material = product_dict.get('material', 'plastic').lower()
+                
+                base_cost = self.material_cost_map.get(material, 1.5)
+                cost_pred = base_cost * weight * 0.02
+                co2_pred = weight * 0.5
+                
+                print("[WARNING] Using fallback prediction (models not loaded)")
+                return cost_pred, co2_pred, {}
+            
             # ================================================================
-
-            # Calculate expected ranges based on weight (adjust multipliers from your domain knowledge)
+            # STEP 1: Generate ALL features
+            # ================================================================
+            features = self.engineer_features(product_dict)
+            
+            # ================================================================
+            # STEP 2: COST PREDICTION - Maintain exact feature order
+            # ================================================================
+            X_cost = []
+            missing_cost_features = []
+            
+            for feat in self.cost_features:
+                if feat in features:
+                    X_cost.append(features[feat])
+                else:
+                    missing_cost_features.append(feat)
+                    # Intelligent defaults
+                    if 'encoded' in feat:
+                        X_cost.append(0)
+                    elif 'ratio' in feat or 'percent' in feat:
+                        X_cost.append(1.0)
+                    else:
+                        X_cost.append(0)
+            
+            if missing_cost_features:
+                print(f"[CRITICAL] Missing {len(missing_cost_features)} cost features:")
+                for feat in missing_cost_features[:5]:
+                    print(f"  - {feat}")
+                print("[ERROR] This will cause prediction errors!")
+            
+            X_cost = np.array(X_cost).reshape(1, -1)
+            cost_pred = float(self.cost_model.predict(X_cost)[0])
+            
+            # ================================================================
+            # STEP 3: CO2 PREDICTION - Maintain exact feature order
+            # ================================================================
+            X_co2 = []
+            missing_co2_features = []
+            
+            for feat in self.co2_features:
+                if feat in features:
+                    X_co2.append(features[feat])
+                else:
+                    missing_co2_features.append(feat)
+                    if 'encoded' in feat:
+                        X_co2.append(0)
+                    elif 'ratio' in feat or 'percent' in feat:
+                        X_co2.append(1.0)
+                    else:
+                        X_co2.append(0)
+            
+            if missing_co2_features:
+                print(f"[CRITICAL] Missing {len(missing_co2_features)} CO2 features:")
+                for feat in missing_co2_features[:5]:
+                    print(f"  - {feat}")
+                print("[ERROR] This will cause prediction errors!")
+            
+            X_co2 = np.array(X_co2).reshape(1, -1)
+            
+            # CRITICAL: Model was trained on log-transformed CO2 values
+            co2_pred_log = self.co2_model.predict(X_co2)[0]
+            co2_pred = float(np.expm1(co2_pred_log))
+            
+            # ================================================================
+            # VALIDATION: Check if predictions are reasonable
+            # ================================================================
             weight = features['weight_measured']
             product_qty = features['product_quantity']
-
-            # Expected cost: roughly ₹0.5-5 per gram depending on material
-            # For 1000 units of 50g packaging = 50,000g total = ₹25,000-250,000 potential range
-            expected_max_cost = (weight * product_qty * 5)  # ₹5 per gram is very expensive material
-
-            # Expected CO2: roughly 0.01-0.5 per gram
-            expected_max_co2 = (weight * product_qty * 0.5)
-
+            
+            # Expected ranges
+            expected_max_cost = weight * product_qty * 5
+            expected_max_co2 = weight * product_qty * 0.5
+            
             # Validate cost
             if cost_pred < 0:
-                print(f"ERROR: Negative cost: ₹{cost_pred:.2f}")
+                print(f"[ERROR] Negative cost: Rs.{cost_pred:.2f}")
             elif cost_pred > expected_max_cost:
-                print(f"ERROR: Cost exceeds physical limits: ₹{cost_pred:.2f} (max expected: ₹{expected_max_cost:.2f})")
-                print(f"Input: {weight}g × {product_qty} units = {weight * product_qty}g total")
+                print(f"[ERROR] Cost exceeds limits: Rs.{cost_pred:.2f} (max: Rs.{expected_max_cost:.2f})")
             elif cost_pred > expected_max_cost * 0.5:
-                print(f"High cost: ₹{cost_pred:.2f} (50%+ of theoretical maximum)")
-
+                print(f"[WARNING] High cost: Rs.{cost_pred:.2f}")
+            
             # Validate CO2
             if co2_pred < 0:
-                print(f"ERROR: Negative CO2: {co2_pred:.2f}")
+                print(f"[ERROR] Negative CO2: {co2_pred:.2f}")
             elif co2_pred > expected_max_co2:
-                print(f"ERROR: CO2 exceeds physical limits: {co2_pred:.2f} (max expected: {expected_max_co2:.2f})")
+                print(f"[ERROR] CO2 exceeds limits: {co2_pred:.2f} (max: {expected_max_co2:.2f})")
             elif co2_pred > expected_max_co2 * 0.5:
-                print(f"High CO2: {co2_pred:.2f}")
-
-            print(f"✓ Prediction: ₹{cost_pred:.2f} | CO2: {co2_pred:.2f}")
-             
-            print(f"✓ Prediction SUCCESS:") 
-            print(f"  Cost: ₹{cost_pred:.2f}") 
-            print(f"  CO2: {co2_pred:.2f}") 
-            print(f"  Features generated: {len(features)}") 
-            print(f"  Missing cost features: {len(missing_cost_features)}") 
-            print(f"  Missing CO2 features: {len(missing_co2_features)}") 
-             
-            return cost_pred, co2_pred, features 
-             
-        except Exception as e: 
-            print(f"❌ Prediction error: {e}") 
-            print(f"Traceback: {traceback.format_exc()}") 
-            return None, None, None 
+                print(f"[WARNING] High CO2: {co2_pred:.2f}")
+            
+            print(f"[OK] Prediction: Cost=Rs.{cost_pred:.2f} | CO2={co2_pred:.2f}")
+            
+            return cost_pred, co2_pred, features
+            
+        except Exception as e:
+            print(f"[ERROR] Prediction error: {e}")
+            traceback.print_exc()
+            return None, None, None
   
 ml_manager = MLModelManager()  
   
