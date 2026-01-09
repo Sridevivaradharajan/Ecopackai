@@ -1361,18 +1361,40 @@ def bulk_upload(current_user_id):
         results = []  
         for idx, row in df.iterrows(): 
             try: 
-                # Extract input data 
+                # Extract material first for parent_material inference
+                material = str(row.get('material', 'plastic')).lower().strip()
+                
+                # Infer parent_material if not provided (CRITICAL FIX)
+                parent_material = str(row.get('parent_material', '')).lower().strip()
+                if not parent_material or parent_material in ['', 'nan', 'none']:
+                    # Use same inference logic as recommendation route
+                    if material in ['aluminium', 'aluminum', 'metal', 'steel']:
+                        parent_material = 'metal'
+                    elif material in ['cardboard', 'paper', 'paperboard']:
+                        parent_material = 'paper-or-cardboard'
+                    elif material == 'glass':
+                        parent_material = 'glass'
+                    elif 'plastic' in material:
+                        parent_material = 'plastic'
+                    else:
+                        parent_material = 'unknown'
+                
+                # Build COMPLETE input data dictionary
                 input_data = { 
-                    'product_quantity': float(row.get('product_quantity', 0)), 
-                    'weight_measured': float(row.get('weight_measured', 0)), 
-                    'weight_capacity': float(row.get('weight_capacity', 0)), 
-                    'material': str(row.get('material', '')).lower(), 
-                    'shape': str(row.get('shape', '')).lower(), 
-                    'strength': str(row.get('strength', 'medium')), 
-                    'food_group': str(row.get('food_group', '')).lower(), 
-                    'recycling': str(row.get('recycling', 'recyclable')), 
+                    # Numeric fields
+                    'product_quantity': float(row.get('product_quantity', 500)), 
+                    'weight_measured': float(row.get('weight_measured', 50)), 
+                    'weight_capacity': float(row.get('weight_capacity', 600)), 
                     'number_of_units': int(row.get('number_of_units', 1)), 
-                    'recyclability_percent': float(row.get('recyclability_percent', 70)), 
+                    'recyclability_percent': float(row.get('recyclability_percent', 70)),
+                    
+                    # Categorical fields (ALL 6 required by models)
+                    'material': material,
+                    'parent_material': parent_material,  # CRITICAL: Added this
+                    'shape': str(row.get('shape', 'bottle')).lower().strip(), 
+                    'strength': str(row.get('strength', 'Medium')).strip(),  # Keep capitalization
+                    'food_group': str(row.get('food_group', 'fruit-juices')).lower().strip(), 
+                    'recycling': str(row.get('recycling', 'Recyclable')).strip(),  # Keep capitalization
                 } 
                  
                 # Get predictions using ml_manager 
@@ -1383,27 +1405,29 @@ def bulk_upload(current_user_id):
                     results.append({ 
                         'row': idx + 1, 
                         'material': input_data['material'], 
-                        'shape': input_data.get('shape', ''), 
-                        'strength': input_data.get('strength', ''), 
-                        'food_group': input_data.get('food_group', ''), 
-                        'recycling': input_data.get('recycling', ''), 
-                        'product_quantity': input_data.get('product_quantity', ''), 
-                        'weight_measured': input_data.get('weight_measured', ''), 
-                        'weight_capacity': input_data.get('weight_capacity', ''), 
-                        'number_of_units': input_data.get('number_of_units', ''), 
-                        'recyclability_percent': input_data.get('recyclability_percent', ''), 
+                        'parent_material': input_data['parent_material'],  # Include in response
+                        'shape': input_data['shape'], 
+                        'strength': input_data['strength'], 
+                        'food_group': input_data['food_group'], 
+                        'recycling': input_data['recycling'], 
+                        'product_quantity': input_data['product_quantity'], 
+                        'weight_measured': input_data['weight_measured'], 
+                        'weight_capacity': input_data['weight_capacity'], 
+                        'number_of_units': input_data['number_of_units'], 
+                        'recyclability_percent': input_data['recyclability_percent'], 
                         'cost': '-', 
                         'co2': '-', 
                         'status': 'error', 
-                        'error': 'Prediction failed' 
+                        'error': 'Prediction failed - check input data format' 
                     }) 
                     continue 
  
-                # ✅ Return BOTH input data AND predictions 
+                # Return BOTH input data AND predictions 
                 results.append({ 
                     'row': idx + 1, 
-                    # Input fields (echo back) 
+                    # Input fields (echo back with inferred parent_material)
                     'material': input_data['material'], 
+                    'parent_material': input_data['parent_material'],  # Show inferred value
                     'shape': input_data['shape'], 
                     'strength': input_data['strength'], 
                     'food_group': input_data['food_group'], 
@@ -1422,19 +1446,17 @@ def bulk_upload(current_user_id):
             except Exception as e: 
                 results.append({ 
                     'row': idx + 1, 
-                    'material': str(row.get('material', '')), 
+                    'material': str(row.get('material', 'N/A')), 
                     'status': 'error', 
-                    'error': str(e) 
+                    'error': f'Processing error: {str(e)}' 
                 }) 
           
         conn = get_db_connection()  
         if not conn: 
-            # If DB fails, we still return the processed results but warn about save failure 
-            # Or we can fail the whole request.  
-            # Given bulk upload processes but saves history, maybe we should fail? 
-            # Or just return results without saving to DB. 
-            # Let's return error for now to be consistent. 
-            return jsonify({'error': 'Database connection failed, results not saved', 'results': results}), 503 
+            return jsonify({
+                'error': 'Database connection failed, results not saved', 
+                'results': results
+            }), 503 
  
         cur = conn.cursor()  
         cur.execute('''  
@@ -1454,7 +1476,7 @@ def bulk_upload(current_user_id):
             'results': results  
         }), 200  
     except Exception as e:  
-        return jsonify({'error': str(e)}), 500  
+        return jsonify({'error': str(e)}), 500
   
 @app.route('/api/analytics/user', methods=['GET'])  
 @token_required  
