@@ -1201,17 +1201,13 @@ def register():
 @app.route('/api/login', methods=['POST'])  
 def api_login():  
     try:  
-        if request.is_json:
-            data = request.get_json()
-        else:
-            data = request.form
-            
+        data = request.get_json()
         email = data.get('email', '').strip()  
         password = data.get('password', '')  
           
         conn = get_db_connection()  
         if not conn: 
-            return redirect('/?error=database_connection_failed')
+            return jsonify({'error': 'Database connection failed'}), 503
  
         cur = conn.cursor(cursor_factory=RealDictCursor)  
         cur.execute('SELECT * FROM users WHERE email = %s', (email,))  
@@ -1220,7 +1216,7 @@ def api_login():
         if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
             cur.close()
             conn.close()
-            return redirect('/?error=invalid_credentials')
+            return jsonify({'error': 'Invalid email or password'}), 401
           
         cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.datetime.now(), user['id']))  
         conn.commit()  
@@ -1234,20 +1230,28 @@ def api_login():
         cur.close()  
         conn.close()  
     
-        response = redirect('/dashboard')
+        # RETURN JSON RESPONSE
+        response = jsonify({
+            'success': True,
+            'message': 'Login successful',
+            'token': token
+        })
+        
+        # SET COOKIE
         response.set_cookie(
             'token',
             token,
-            max_age=86400,  # 24 hours in seconds
+            max_age=86400,  # 24 hours
             httponly=True,
             samesite='Lax',
-            secure=False,
+            secure=True,  # Required for HTTPS (Render)
             path='/'
         )
-        return response
+        
+        return response, 200
     
     except Exception as e:  
-        return redirect(f'/?error={str(e)}')
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/user/info', methods=['GET'])
 @token_required
