@@ -11,6 +11,7 @@ from flask_cors import CORS
 from authlib.integrations.flask_client import OAuth 
 import psycopg2 
 from psycopg2.extras import RealDictCursor 
+from pathlib import Path
 import bcrypt 
 import jwt 
 import datetime 
@@ -47,12 +48,12 @@ CORS(
                 "http://localhost:3000", 
                 "http://localhost:5000", 
                 "http://127.0.0.1:5000",
-                "https://ecopack-yngt.onrender.com"
+                "https://ecopack-yngt.onrender.com",
+                "https://*.onrender.com"  # Allow any Render subdomain
             ] 
         } 
     } 
 )
- 
 # -------------------------------------------------- 
 # DATABASE 
 # -------------------------------------------------- 
@@ -197,7 +198,74 @@ def google_callback():
     print(f"[Google Callback] User ID: {user_id}")
     
     return response
- 
+class PredictionValidator:
+    """Professional validation system for packaging predictions"""
+    
+    MATERIAL_COST_RANGES = {
+        'glass': {'min': 0.5, 'max': 4.0, 'typical_max': 2.5},
+        'metal': {'min': 0.8, 'max': 5.0, 'typical_max': 3.5},
+        'aluminium': {'min': 1.0, 'max': 6.0, 'typical_max': 4.0},
+        'aluminum': {'min': 1.0, 'max': 6.0, 'typical_max': 4.0},
+        'plastic': {'min': 0.1, 'max': 2.0, 'typical_max': 1.2},
+        'cardboard': {'min': 0.05, 'max': 1.5, 'typical_max': 0.8},
+        'paper': {'min': 0.05, 'max': 1.5, 'typical_max': 0.8},
+    }
+    
+    MATERIAL_CO2_RANGES = {
+        'glass': {'min': 0.1, 'max': 2.0, 'typical_max': 1.2},
+        'metal': {'min': 0.3, 'max': 3.0, 'typical_max': 2.0},
+        'aluminium': {'min': 0.5, 'max': 4.0, 'typical_max': 2.5},
+        'aluminum': {'min': 0.5, 'max': 4.0, 'typical_max': 2.5},
+        'plastic': {'min': 0.05, 'max': 1.5, 'typical_max': 0.8},
+        'cardboard': {'min': 0.01, 'max': 0.5, 'typical_max': 0.3},
+        'paper': {'min': 0.01, 'max': 0.5, 'typical_max': 0.3},
+    }
+    
+    @classmethod
+    def validate_prediction(cls, cost_pred, co2_pred, product_dict, verbose=True):
+        """Validate predictions against material-specific bounds"""
+        material = str(product_dict.get('material', 'plastic')).lower()
+        weight = float(product_dict.get('weight_measured', 50))
+        
+        # Get material ranges
+        cost_ranges = cls.MATERIAL_COST_RANGES.get(material, cls.MATERIAL_COST_RANGES['plastic'])
+        co2_ranges = cls.MATERIAL_CO2_RANGES.get(material, cls.MATERIAL_CO2_RANGES['plastic'])
+        
+        # Calculate bounds
+        expected_cost_max = cost_ranges['typical_max'] * weight
+        expected_co2_max = co2_ranges['typical_max'] * weight
+        
+        # Validation flags
+        cost_status = 'valid'
+        co2_status = 'valid'
+        severity = 'none'
+        
+        if cost_pred > cost_ranges['max'] * weight:
+            cost_status = 'high'
+            severity = 'warning'
+        elif cost_pred > expected_cost_max:
+            cost_status = 'elevated'
+            severity = 'info'
+            
+        if co2_pred > co2_ranges['max'] * weight:
+            co2_status = 'high'
+            severity = 'warning' if severity != 'warning' else severity
+        elif co2_pred > expected_co2_max:
+            co2_status = 'elevated'
+            severity = 'info' if severity == 'none' else severity
+        
+        if verbose:
+            if severity == 'none':
+                print(f"[✓] Prediction: Cost=₹{cost_pred:.2f} | CO2={co2_pred:.2f}")
+            elif severity == 'info':
+                print(f"[ℹ] Prediction: Cost=₹{cost_pred:.2f} | CO2={co2_pred:.2f}")
+                print(f"    Material: {material} ({weight}g) - Above typical range but within bounds")
+            else:
+                print(f"[⚠] Prediction: Cost=₹{cost_pred:.2f} | CO2={co2_pred:.2f}")
+                print(f"    Material: {material} ({weight}g) - Unusually high for this material")
+        
+        return True, {'cost_status': cost_status, 'co2_status': co2_status, 'severity': severity}
+     
 class MLModelManager:
     """
     Complete ML model manager with robust feature engineering and validation
@@ -236,7 +304,88 @@ class MLModelManager:
             'lid': 0.6, 'cap': 0.6, 'seal': 0.5, 'film': 0.7,
             'unknown': 1.0
         }
-    
+
+    def _standardize_recycling(self, value):
+        """Standardize recycling values to match training categories"""
+        if not value or pd.isna(value):
+            return 'Recyclable'
+        
+        val_str = str(value).lower().strip()
+        
+        # Translation map from training notebook
+        recycling_map = {
+            # Raw values from CSV
+            'recycle': 'Recyclable',
+            'recyclable': 'Recyclable',
+            'yes': 'Recyclable',
+            
+            'discard': 'Not Recyclable',
+            'not recyclable': 'Not Recyclable',
+            'no': 'Not Recyclable',
+            
+            'compost': 'Compost',
+            'compostable': 'Compost',
+            
+            'reuse': 'Reusable',
+            'reusable': 'Reusable',
+            
+            'deposit': 'Deposit Return',
+            'deposit return': 'Deposit Return',
+            
+            'return': 'Return to Store',
+            'return to store': 'Return to Store',
+        }
+        
+        return recycling_map.get(val_str, 'Recyclable')
+
+    def _standardize_shape(self, value):
+        """Translate raw shape values to training categories"""
+        if not value or pd.isna(value):
+            return 'bottle'
+        
+        val_str = str(value).lower().strip()
+        
+        # Translation map from training notebook
+        shape_map = {
+            # Compound shapes
+            'individual-bag': 'bag',
+            'individual-pot': 'pot',
+            'resealable-bag': 'bag',
+            'plastic-bag': 'bag',
+            
+            'food-can': 'can',
+            'drink-can': 'can',
+            
+            'bottle-cap': 'cap',
+            'twist-off-lid': 'lid',
+            
+            'pizza-box': 'box',
+            'rectangular': 'box',
+            'square': 'box',
+            
+            'round': 'container',
+            'cone': 'container',
+            
+            # Keep standard values as-is
+            'box': 'box',
+            'bag': 'bag',
+            'bottle': 'bottle',
+            'can': 'can',
+            'jar': 'jar',
+            'pouch': 'pouch',
+            'tray': 'tray',
+            'tube': 'tube',
+            'container': 'container',
+            'wrapper': 'wrapper',
+            'pot': 'pot',
+            'cap': 'cap',
+            'lid': 'lid',
+            'seal': 'seal',
+            'film': 'film'
+        }
+        
+        return shape_map.get(val_str, val_str)
+     
     def load_models(self):
         """Load all model files with validation"""
         try:
@@ -370,137 +519,72 @@ class MLModelManager:
             traceback.print_exc()
             return False
     
-    def _encode_categorical(self, value, column_name):
+   def _encode_categorical(self, value, column_name):
         """
-        Encode categorical values with ROBUST fallback handling
+        Categorical encoding WITH preprocessing/standardization
         
-        Priority:
-        1. Exact match (case-sensitive)
-        2. Case-insensitive match
-        3. Fuzzy match (e.g., "aluminum" -> "aluminium")
-        4. Domain-specific fallback
-        5. Most common value (last resort)
+        Key addition: Standardize recycling/shape BEFORE encoding
         """
         if column_name not in self.label_encoders:
-            print(f"[WARNING] No encoder for {column_name}, returning 0")
+            print(f"[ERROR] No encoder for {column_name}")
             return 0
         
         encoder = self.label_encoders[column_name]
         available_classes = list(encoder.classes_)
         
-        # Convert to string
+        # ================================================================
+        # STEP 1: STANDARDIZE INPUT (NEW - This fixes bulk upload!)
+        # ================================================================
+        if column_name == 'recycling':
+            value = self._standardize_recycling(value)
+        elif column_name == 'shape':
+            value = self._standardize_shape(value)
+        
         value_str = str(value).strip()
         
-        # STEP 1: Exact Match (Case-Sensitive)
+        # ================================================================
+        # STEP 2: EXACT MATCH
+        # ================================================================
         if value_str in available_classes:
             return int(encoder.transform([value_str])[0])
         
-        # STEP 2: Case-Insensitive Match
+        # ================================================================
+        # STEP 3: CASE-INSENSITIVE MATCH
+        # ================================================================
         value_lower = value_str.lower()
         for cls in available_classes:
             if str(cls).lower() == value_lower:
                 return int(encoder.transform([str(cls)])[0])
         
-        # STEP 3: Fuzzy Mappings (Domain-Specific)
-        fuzzy_mappings = {
+        # ================================================================
+        # STEP 4: KNOWN ALIASES (for material/parent_material only)
+        # ================================================================
+        aliases = {
             'material': {
                 'aluminum': 'aluminium',
-                'carton': 'cardboard',
-                'paperboard': 'cardboard',
-                'tin': 'metal',
-                'iron': 'metal',
-                'pe': 'plastic',
-                'pp': 'plastic',
-                'pet': 'plastic',
-                'hdpe': 'plastic',
-                'ldpe': 'plastic',
-                'polypropylene': 'plastic',
-                'polyethylene': 'plastic',
-                'pvc': 'plastic 7'
+                'carton': 'cardboard'
             },
             'parent_material': {
                 'aluminum': 'metal',
                 'aluminium': 'metal',
-                'steel': 'metal',
-                'tin': 'metal',
-                'iron': 'metal',
                 'cardboard': 'paper-or-cardboard',
-                'paperboard': 'paper-or-cardboard',
-                'paper': 'paper-or-cardboard',
-                'carton': 'paper-or-cardboard'
-            },
-            'shape': {
-                'package': 'packaging',
-                'pack': 'packaging',
-                'wrapping': 'wrapper',
-                'covering': 'wrapper',
-                'top': 'cap',
-                'cover': 'lid',
-                'basket': 'container',
-                'dish': 'tray'
-            },
-            'strength': {
-                'weak': 'Low',
-                'low': 'Low',
-                'strong': 'High',
-                'high': 'High',
-                'normal': 'Medium',
-                'medium': 'Medium',
-                'average': 'Medium',
-                'very strong': 'Very High',
-                'very high': 'Very High',
-                'extra strong': 'Very High'
-            },
-            'recycling': {
-                'yes': 'Recyclable',
-                'no': 'Not Recyclable',
-                'biodegradable': 'Compost',
-                'compostable': 'Compost',
-                'returnable': 'Return to Store',
-                'deposit': 'Deposit Return',
-                'reuse': 'Reusable'
-            },
-            'food_group': {
-                'juice': 'fruit-juices',
-                'juices': 'fruit-juices',
-                'biscuit': 'biscuits-and-cakes',
-                'cake': 'biscuits-and-cakes',
-                'dessert': 'dairy-desserts',
-                'meat': 'meat-other-than-poultry',
-                'chicken': 'poultry',
-                'fish': 'fish-and-seafood',
-                'vegetable': 'vegetables',
-                'fruit': 'fruits'
+                'paper': 'paper-or-cardboard'
             }
         }
         
-        if column_name in fuzzy_mappings:
-            mapped = fuzzy_mappings[column_name].get(value_lower)
+        if column_name in aliases:
+            mapped = aliases[column_name].get(value_lower)
             if mapped and mapped in available_classes:
-                print(f"[INFO] Fuzzy match: {column_name}='{value}' -> '{mapped}'")
                 return int(encoder.transform([mapped])[0])
         
-        # STEP 4: Domain Fallbacks (most common safe values)
-        fallback_map = {
-            'material': 'plastic',
-            'parent_material': 'plastic',
-            'shape': 'bottle',
-            'strength': 'Medium',
-            'recycling': 'Recyclable',
-            'food_group': 'fruit-juices'
-        }
-        
-        fallback = fallback_map.get(column_name)
-        if fallback and fallback in available_classes:
-            print(f"[WARNING] Using fallback for {column_name}='{value}' -> '{fallback}'")
-            return int(encoder.transform([fallback])[0])
-        
-        # STEP 5: First available class (last resort)
+        # ================================================================
+        # STEP 5: SAFE FALLBACK
+        # ================================================================
         if available_classes:
-            print(f"[ERROR] Could not encode {column_name}='{value}', using first class: '{available_classes[0]}'")
+            print(f"[WARNING] Unknown {column_name}='{value}', using: '{available_classes[0]}'")
             return int(encoder.transform([available_classes[0]])[0])
         
-        print(f"[CRITICAL] No classes available for {column_name}, returning 0")
+        print(f"[CRITICAL] No encoder classes for {column_name}")
         return 0
     
     def _infer_parent_material(self, material):
@@ -710,34 +794,14 @@ class MLModelManager:
             co2_pred = float(np.expm1(co2_pred_log))
             
             # ================================================================
-            # VALIDATION: Check if predictions are reasonable
+            # STEP 4: PROFESSIONAL VALIDATION (REPLACE EXISTING)
             # ================================================================
-            weight = features['weight_measured']
-            product_qty = features['product_quantity']
-            
-            # Expected ranges
-            expected_max_cost = weight * product_qty * 5
-            expected_max_co2 = weight * product_qty * 0.5
-            
-            # Validate cost
-            if cost_pred < 0:
-                print(f"[ERROR] Negative cost: Rs.{cost_pred:.2f}")
-            elif cost_pred > expected_max_cost:
-                print(f"[ERROR] Cost exceeds limits: Rs.{cost_pred:.2f} (max: Rs.{expected_max_cost:.2f})")
-            elif cost_pred > expected_max_cost * 0.5:
-                print(f"[WARNING] High cost: Rs.{cost_pred:.2f}")
-            
-            # Validate CO2
-            if co2_pred < 0:
-                print(f"[ERROR] Negative CO2: {co2_pred:.2f}")
-            elif co2_pred > expected_max_co2:
-                print(f"[ERROR] CO2 exceeds limits: {co2_pred:.2f} (max: {expected_max_co2:.2f})")
-            elif co2_pred > expected_max_co2 * 0.5:
-                print(f"[WARNING] High CO2: {co2_pred:.2f}")
-            
-            print(f"[OK] Prediction: Cost=Rs.{cost_pred:.2f} | CO2={co2_pred:.2f}")
-            
-            return cost_pred, co2_pred, features
+            is_valid, diagnostics = PredictionValidator.validate_prediction(
+                cost_pred=cost_pred,
+                co2_pred=co2_pred,
+                product_dict=product_dict,
+                verbose=True
+            )
             
         except Exception as e:
             print(f"[ERROR] Prediction error: {e}")
