@@ -39,20 +39,18 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 # -------------------------------------------------- 
 # CORS 
 # -------------------------------------------------- 
-CORS( 
-    app, 
-    supports_credentials=True, 
-    resources={ 
-        r"/*": { 
-            "origins": [ 
-                "http://localhost:3000", 
-                "http://localhost:5000", 
-                "http://127.0.0.1:5000",
-                "https://ecopack-yngt.onrender.com",
-                "https://*.onrender.com"  # Allow any Render subdomain
-            ] 
-        } 
-    } 
+CORS(
+    app,
+    supports_credentials=True,
+    origins=[
+        "http://localhost:3000",
+        "http://localhost:5000",
+        "http://127.0.0.1:5000",
+        "https://ecopack-yngt.onrender.com",
+    ],
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    expose_headers=["Set-Cookie"]
 )
 # -------------------------------------------------- 
 # DATABASE 
