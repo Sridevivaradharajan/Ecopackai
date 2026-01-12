@@ -600,7 +600,7 @@
 
                     <div class="divider"><span>or continue with</span></div>
 
-                    <button type="button" class="btn-google" onclick="window.location.href='http://localhost:5000/auth/google'">
+                    <button type="button" class="btn-google" onclick="window.location.href='/auth/google'">
                         <svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
                             <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
@@ -744,7 +744,7 @@
         }
 
         // Login Form
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const email = document.getElementById('loginEmail').value.trim();
@@ -761,27 +761,39 @@
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Signing in...';
             
-            // Create a hidden form and submit it (server-side redirect)
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `${API_BASE}/login`;
-            
-            const emailInput = document.createElement('input');
-            emailInput.type = 'hidden';
-            emailInput.name = 'email';
-            emailInput.value = email;
-            
-            const passwordInput = document.createElement('input');
-            passwordInput.type = 'hidden';
-            passwordInput.name = 'password';
-            passwordInput.value = password;
-            
-            form.appendChild(emailInput);
-            form.appendChild(passwordInput);
-            document.body.appendChild(form);
-            
-            // Submit form (server will handle redirect)
-            form.submit();
+            try {
+                // Make JSON API call
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    credentials: 'include',  // CRITICAL: Send cookies
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // SUCCESS - Show message and redirect
+                    showAlert('✓ Login successful! Redirecting...', 'success');
+                    
+                    // Redirect to dashboard after brief delay
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                } else {
+                    // FAILED - Show error
+                    showAlert(data.error || 'Login failed. Please check your credentials.');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i><span>Sign In</span>';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Unable to connect to server. Please try again.');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i><span>Sign In</span>';
+            }
         });
         
         // Register Form
