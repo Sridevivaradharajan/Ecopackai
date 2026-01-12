@@ -519,7 +519,7 @@ class MLModelManager:
             traceback.print_exc()
             return False
     
-   def _encode_categorical(self, value, column_name):
+    def _encode_categorical(self, value, column_name):
         """
         Categorical encoding WITH preprocessing/standardization
         
@@ -802,6 +802,8 @@ class MLModelManager:
                 product_dict=product_dict,
                 verbose=True
             )
+            
+            return cost_pred, co2_pred, features
             
         except Exception as e:
             print(f"[ERROR] Prediction error: {e}")
