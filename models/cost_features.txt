@@ -1,0 +1,13 @@
+capacity_weight_prod
+material_weight
+weight_log
+weight_squared
+packaging_ratio
+strength_encoded
+parent_material_encoded
+recyclability_percent
+material_encoded
+weight_capacity
+recycling_encoded
+shape_encoded
+product_quantity

@@ -1,0 +1,116 @@
+====================================================================================================
+ECOPACK AI - FEATURE DOCUMENTATION
+====================================================================================================
+
+Created: 2026-01-13 13:50:53
+Source DataFrame: df_eng
+Total Rows: 5,041
+Total Features: 20
+
+====================================================================================================
+COLUMN DETAILS
+====================================================================================================
+
+Column Name                              Type                 Used By        
+----------------------------------------------------------------------------------------------------
+code                                     ID (String)          Identifier     
+
+capacity_weight_prod                     Numeric (Engineered) Cost + CO2     
+food_group_encoded                       Numeric (Encoded)    CO2            
+material_encoded                         Numeric (Encoded)    Cost + CO2     
+material_weight                          Numeric (Engineered) Cost + CO2     
+material_weight_sq                       Numeric (Engineered) CO2            
+number_of_units                          Numeric (Raw)        CO2            
+packaging_ratio                          Numeric (Engineered) Cost           
+parent_mat_weight                        Numeric (Engineered) CO2            
+parent_material_encoded                  Numeric (Encoded)    Cost + CO2     
+product_quantity                         Numeric (Raw)        Cost + CO2     
+recyclability_percent                    Numeric (Raw)        Cost           
+recycling_encoded                        Numeric (Encoded)    Cost + CO2     
+shape_encoded                            Numeric (Encoded)    Cost + CO2     
+shape_weight                             Numeric (Engineered) CO2            
+strength_encoded                         Numeric (Encoded)    Cost + CO2     
+weight_capacity                          Numeric (Raw)        Cost + CO2     
+weight_log                               Numeric (Engineered) Cost + CO2     
+weight_measured                          Numeric (Raw)        CO2            
+weight_sqrt                              Numeric (Engineered) CO2            
+weight_squared                           Numeric (Engineered) Cost + CO2     
+
+Packaging_Cost                           Target (Numeric)     Cost Model     
+CO2_Impact_Index                         Target (Numeric)     CO2 Model      
+
+
+====================================================================================================
+COST MODEL FEATURES (13)
+====================================================================================================
+  1. capacity_weight_prod
+  2. material_weight
+  3. weight_log
+  4. weight_squared
+  5. packaging_ratio
+  6. strength_encoded
+  7. parent_material_encoded
+  8. recyclability_percent
+  9. material_encoded
+ 10. weight_capacity
+ 11. recycling_encoded
+ 12. shape_encoded
+ 13. product_quantity
+
+
+====================================================================================================
+CO2 MODEL FEATURES (18)
+====================================================================================================
+  1. weight_measured
+  2. product_quantity
+  3. number_of_units
+  4. weight_capacity
+  5. material_encoded
+  6. parent_material_encoded
+  7. shape_encoded
+  8. recycling_encoded
+  9. food_group_encoded
+ 10. strength_encoded
+ 11. weight_squared
+ 12. weight_log
+ 13. weight_sqrt
+ 14. capacity_weight_prod
+ 15. material_weight
+ 16. material_weight_sq
+ 17. parent_mat_weight
+ 18. shape_weight
+
+
+====================================================================================================
+SHARED FEATURES (11)
+====================================================================================================
+  1. capacity_weight_prod
+  2. material_encoded
+  3. material_weight
+  4. parent_material_encoded
+  5. product_quantity
+  6. recycling_encoded
+  7. shape_encoded
+  8. strength_encoded
+  9. weight_capacity
+ 10. weight_log
+ 11. weight_squared
+
+
+====================================================================================================
+COST-ONLY FEATURES (2)
+====================================================================================================
+  1. packaging_ratio
+  2. recyclability_percent
+
+
+====================================================================================================
+CO2-ONLY FEATURES (7)
+====================================================================================================
+  1. food_group_encoded
+  2. material_weight_sq
+  3. number_of_units
+  4. parent_mat_weight
+  5. shape_weight
+  6. weight_measured
+  7. weight_sqrt
