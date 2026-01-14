@@ -268,6 +268,7 @@ class MLModelManager:
     """
     PRODUCTION ML MODEL MANAGER
     Matches training pipeline EXACTLY from notebook
+    100% Feature Parity with Training
     """
     
     def __init__(self):
@@ -277,35 +278,62 @@ class MLModelManager:
         self.cost_features = None
         self.co2_features = None
         
-        # Material to parent_material mapping (CRITICAL)
+        # ========================================================================
+        # HELPER MAPPINGS FROM NOTEBOOK (CRITICAL FOR FEATURE ENGINEERING)
+        # ========================================================================
+        
+        # 1. STRENGTH MAPPING (converts categorical to numeric)
+        self.strength_map = {
+            'Low': 1.0, 
+            'Medium': 2.2, 
+            'High': 3.8, 
+            'Very High': 5.5
+        }
+        
+        # 2. MATERIAL COST MAP (₹ per kg, 2024 India market rates)
+        self.material_cost_map = {
+            # Plastics
+            'plastic': 1.1, 'pet': 1.25, 'hdpe': 1.15, 'ldpe': 1.0, 
+            'pp': 1.1, 'ps': 1.1, 'pvc': 1.1, 'pe': 1.05, 'plastic 7': 1.1,
+            # Paper-based
+            'paper': 0.75, 'cardboard': 0.65, 'paperboard': 0.75,
+            # Glass
+            'glass': 2.3,
+            # Metals
+            'metal': 2.8, 'aluminium': 3.2, 'aluminum': 3.2, 'steel': 2.8, 'tinplate': 2.8,
+            # Others
+            'wood': 1.4, 'composite': 1.9, 'unknown': 1.3
+        }
+        
+        # 3. SHAPE COMPLEXITY MAP (manufacturing multiplier)
+        self.shape_complexity = {
+            'box': 1.0, 'bag': 0.75, 'bottle': 1.2, 'can': 1.15,
+            'jar': 1.3, 'pouch': 0.85, 'tray': 1.05, 'tube': 1.25,
+            'container': 1.1, 'wrapper': 0.8, 'packaging': 1.0,
+            'lid': 0.6, 'cap': 0.6, 'seal': 0.5, 'film': 0.7,
+            'pot': 1.0, 'sleeve': 0.8, 'unknown': 1.0
+        }
+        
+        # 4. PARENT MATERIAL MAPPING (comprehensive)
         self.parent_material_map = {
             # Plastics
-            'plastic': 'plastic',
-            'pet': 'plastic',
-            'hdpe': 'plastic',
-            'ldpe': 'plastic',
-            'pp': 'plastic',
-            'ps': 'plastic',
-            'pvc': 'plastic',
-            'bioplastic': 'plastic',
+            'plastic': 'plastic', 'pet': 'plastic', 'hdpe': 'plastic',
+            'ldpe': 'plastic', 'pp': 'plastic', 'ps': 'plastic',
+            'pvc': 'plastic', 'bioplastic': 'plastic', 'pe': 'plastic',
             
             # Metals
-            'metal': 'metal',
-            'aluminium': 'metal',
-            'aluminum': 'metal',
-            'tinplate': 'metal',
-            'steel': 'metal',
+            'metal': 'metal', 'aluminium': 'metal', 'aluminum': 'metal',
+            'tinplate': 'metal', 'steel': 'metal', 'tin': 'metal', 'iron': 'metal',
             
             # Paper-based
-            'paper': 'paper-or-cardboard',
-            'cardboard': 'paper-or-cardboard',
-            'paperboard': 'paper-or-cardboard',
+            'paper': 'paper-or-cardboard', 'cardboard': 'paper-or-cardboard',
+            'paperboard': 'paper-or-cardboard', 'carton': 'paper-or-cardboard',
             
             # Glass
             'glass': 'glass',
             
             # Composites
-            'composite': 'plastic',  # Most composites are plastic-based
+            'composite': 'plastic',
             'wood': 'unknown',
             
             # Fallback
@@ -328,7 +356,7 @@ class MLModelManager:
             return 'plastic'
         elif 'metal' in material_lower or 'alumin' in material_lower or 'steel' in material_lower:
             return 'metal'
-        elif 'paper' in material_lower or 'cardboard' in material_lower:
+        elif 'paper' in material_lower or 'cardboard' in material_lower or 'carton' in material_lower:
             return 'paper-or-cardboard'
         elif 'glass' in material_lower:
             return 'glass'
@@ -578,7 +606,9 @@ class MLModelManager:
         encoder = self.label_encoders[column_name]
         available_classes = list(encoder.classes_)
         
+        # ================================================================
         # STEP 1: STANDARDIZE (CRITICAL)
+        # ================================================================
         if column_name == 'recycling':
             value = self._standardize_recycling(value)
         elif column_name == 'shape':
@@ -586,17 +616,44 @@ class MLModelManager:
         
         value_str = str(value).strip()
         
+        # ================================================================
         # STEP 2: EXACT MATCH
+        # ================================================================
         if value_str in available_classes:
             return int(encoder.transform([value_str])[0])
         
+        # ================================================================
         # STEP 3: CASE-INSENSITIVE MATCH
+        # ================================================================
         value_lower = value_str.lower()
         for cls in available_classes:
             if str(cls).lower() == value_lower:
                 return int(encoder.transform([str(cls)])[0])
         
-        # STEP 4: SAFE FALLBACK
+        # ================================================================
+        # STEP 4: KNOWN ALIASES
+        # ================================================================
+        aliases = {
+            'material': {
+                'aluminum': 'aluminium',
+                'carton': 'cardboard'
+            },
+            'parent_material': {
+                'aluminum': 'metal',
+                'aluminium': 'metal',
+                'cardboard': 'paper-or-cardboard',
+                'paper': 'paper-or-cardboard'
+            }
+        }
+        
+        if column_name in aliases:
+            mapped = aliases[column_name].get(value_lower)
+            if mapped and mapped in available_classes:
+                return int(encoder.transform([mapped])[0])
+        
+        # ================================================================
+        # STEP 5: SAFE FALLBACK
+        # ================================================================
         if available_classes:
             print(f"[WARNING] Unknown {column_name}='{value}', using: '{available_classes[0]}'")
             return int(encoder.transform([available_classes[0]])[0])
@@ -605,13 +662,15 @@ class MLModelManager:
     
     def engineer_features(self, product_dict):
         """
-        EXACT FEATURE ENGINEERING from training notebook
-        Must match line-by-line to ensure correct predictions
+        COMPLETE FEATURE ENGINEERING - Matches notebook exactly
+        
+        Generates ALL features needed by both Cost and CO2 models
+        Returns dict with ALL required features in correct format
         """
         features = {}
         
         # ================================================================
-        # RAW NUMERIC FEATURES
+        # STEP 1: RAW NUMERIC FEATURES
         # ================================================================
         features['product_quantity'] = float(product_dict.get('product_quantity', 500))
         features['weight_measured'] = float(product_dict.get('weight_measured', 50))
@@ -620,13 +679,34 @@ class MLModelManager:
         features['number_of_units'] = int(product_dict.get('number_of_units', 1))
         
         # ================================================================
-        # CATEGORICAL ENCODINGS
+        # STEP 2: HELPER FEATURES (Must be calculated FIRST)
         # ================================================================
-        material = str(product_dict.get('material', 'plastic')).lower().strip()
-        shape = str(product_dict.get('shape', 'bottle')).lower().strip()
-        strength = str(product_dict.get('strength', 'Medium')).strip()
         
-        # CRITICAL: Use centralized inference
+        # Strength numeric mapping
+        strength = product_dict.get('strength', 'Medium')
+        features['strength_num'] = self.strength_map.get(strength, 2.2)
+        
+        # Material cost factor (case-insensitive lookup)
+        material = product_dict.get('material', 'plastic')
+        material_lower = material.lower()
+        features['material_cost_factor'] = self.material_cost_map.get(
+            material_lower,
+            self.material_cost_map.get(material, 1.3)
+        )
+        
+        # Shape complexity (case-insensitive lookup)
+        shape = product_dict.get('shape', 'bottle')
+        shape_lower = shape.lower()
+        features['shape_complexity'] = self.shape_complexity.get(
+            shape_lower,
+            self.shape_complexity.get(shape, 1.0)
+        )
+        
+        # ================================================================
+        # STEP 3: CATEGORICAL ENCODINGS
+        # ================================================================
+        
+        # CRITICAL: Use centralized inference for parent_material
         parent_material = product_dict.get('parent_material')
         if not parent_material or str(parent_material).lower() in ['', 'nan', 'none', 'unknown']:
             parent_material = self._infer_parent_material(material)
@@ -645,7 +725,7 @@ class MLModelManager:
             features[encoded_name] = self._encode_categorical(value, field_name)
         
         # ================================================================
-        # POLYNOMIAL FEATURES
+        # STEP 4: POLYNOMIAL FEATURES (weight transformations)
         # ================================================================
         weight = features['weight_measured']
         
@@ -654,8 +734,9 @@ class MLModelManager:
         features['weight_sqrt'] = np.sqrt(weight)
         
         # ================================================================
-        # INTERACTION FEATURES
+        # STEP 5: INTERACTION FEATURES
         # ================================================================
+        
         capacity = features['weight_capacity']
         material_enc = features['material_encoded']
         parent_mat_enc = features['parent_material_encoded']
@@ -676,8 +757,9 @@ class MLModelManager:
         features['shape_weight'] = shape_enc * weight
         
         # ================================================================
-        # COST-SPECIFIC DERIVED FEATURES
+        # STEP 6: COST-SPECIFIC DERIVED FEATURES
         # ================================================================
+        
         product_qty = features['product_quantity']
         features['packaging_ratio'] = weight / (product_qty + 1)
         
