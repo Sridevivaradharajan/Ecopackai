@@ -1444,6 +1444,7 @@ function showSessionError() {
  
 async function loadAnalytics() {
     try {
+        console.log('[Analytics] Fetching data...');
         const res = await fetch(`${API}/analytics/user`, {
             credentials: 'include'
         });
@@ -1451,55 +1452,82 @@ async function loadAnalytics() {
         if (handleAuthError(res)) return;
 
         if (!res.ok) {
-            console.error(`Analytics API returned ${res.status}`);
+            console.error(`[Analytics] API returned ${res.status}`);
             document.getElementById('totalRecs').textContent = '0';
-            document.getElementById('totalCost').textContent = '₹0';
-            document.getElementById('totalCO2').textContent = '0';
+            document.getElementById('totalCost').textContent = '₹0.00';
+            document.getElementById('totalCO2').textContent = '0.00';
             return;
         }
         
         const data = await res.json();
+        console.log('[Analytics] Received data:', data);
         
-        if (data.analytics) {
-            // Update total recommendations
-            document.getElementById('totalRecs').textContent = data.analytics.total_recommendations || 0;
+        // ===== CALCULATE FROM HISTORY IF ANALYTICS IS EMPTY =====
+        let totalRecs = 0;
+        let totalCostSavings = 0;
+        let totalCO2Reduction = 0;
+        
+        if (data.history && data.history.length > 0) {
+            console.log(`[Analytics] Processing ${data.history.length} history records`);
             
-            // ===== COST HANDLING =====
-            const costSavings = parseFloat(data.analytics.total_cost_savings) || 0;
-            const costElement = document.getElementById('totalCost');
-            const costTrend = document.getElementById('costTrend');
-
-            if (costSavings >= 0) {
-                costElement.textContent = '₹' + costSavings.toFixed(2);
-                costTrend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Optimized';
-                costTrend.className = 'stat-change positive';
-            } else {
-                costElement.textContent = '₹' + Math.abs(costSavings).toFixed(2);
-                costTrend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
-                costTrend.className = 'stat-change negative';
-            }
+            totalRecs = data.history.length;
             
-            // ===== CO₂ HANDLING =====
-            const co2Reduction = parseFloat(data.analytics.total_co2_reduction) || 0;
-            const co2Element = document.getElementById('totalCO2');
-            const co2Trend = document.getElementById('co2Trend');
+            data.history.forEach(record => {
+                const costSavings = parseFloat(record.cost_savings) || 0;
+                const co2Reduction = parseFloat(record.co2_reduction) || 0;
+                
+                totalCostSavings += costSavings;
+                totalCO2Reduction += co2Reduction;
+            });
             
-            if (co2Reduction >= 0) {
-                co2Element.textContent = co2Reduction.toFixed(2);
-                co2Trend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Reduced';
-                co2Trend.className = 'stat-change positive';
-            } else {
-                co2Element.textContent = Math.abs(co2Reduction).toFixed(2);
-                co2Trend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
-                co2Trend.className = 'stat-change negative';
-            }
-        } else {
-            document.getElementById('totalRecs').textContent = '0';
-            document.getElementById('totalCost').textContent = '₹0.00';
-            document.getElementById('totalCO2').textContent = '0.00';
+            console.log('[Analytics] Calculated totals:', {
+                recs: totalRecs,
+                cost: totalCostSavings,
+                co2: totalCO2Reduction
+            });
+        } else if (data.analytics) {
+            // Fallback to analytics table
+            console.log('[Analytics] Using analytics table data');
+            totalRecs = data.analytics.total_recommendations || 0;
+            totalCostSavings = parseFloat(data.analytics.total_cost_savings) || 0;
+            totalCO2Reduction = parseFloat(data.analytics.total_co2_reduction) || 0;
         }
+        
+        // ===== UPDATE UI =====
+        document.getElementById('totalRecs').textContent = totalRecs;
+        
+        // Cost handling
+        const costElement = document.getElementById('totalCost');
+        const costTrend = document.getElementById('costTrend');
+        
+        if (totalCostSavings >= 0) {
+            costElement.textContent = '₹' + totalCostSavings.toFixed(2);
+            costTrend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Optimized';
+            costTrend.className = 'stat-change positive';
+        } else {
+            costElement.textContent = '₹' + Math.abs(totalCostSavings).toFixed(2);
+            costTrend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
+            costTrend.className = 'stat-change negative';
+        }
+        
+        // CO₂ handling
+        const co2Element = document.getElementById('totalCO2');
+        const co2Trend = document.getElementById('co2Trend');
+        
+        if (totalCO2Reduction >= 0) {
+            co2Element.textContent = totalCO2Reduction.toFixed(2);
+            co2Trend.innerHTML = '<i class="bi bi-arrow-down-short"></i> Reduced';
+            co2Trend.className = 'stat-change positive';
+        } else {
+            co2Element.textContent = Math.abs(totalCO2Reduction).toFixed(2);
+            co2Trend.innerHTML = '<i class="bi bi-arrow-up-short"></i> Increased';
+            co2Trend.className = 'stat-change negative';
+        }
+        
+        console.log('[Analytics] UI updated successfully');
+        
     } catch (e) {
-        console.error('Analytics error:', e);
+        console.error('[Analytics] Error:', e);
         document.getElementById('totalRecs').textContent = '0';
         document.getElementById('totalCost').textContent = '₹0.00';
         document.getElementById('totalCO2').textContent = '0.00';
@@ -1729,7 +1757,12 @@ function displayRecs(data) {
     const c = data.current_packaging;
     const r = data.recommendations;
     
-    console.log('Current packaging data:', c); 
+    console.log('=== DISPLAY RECS DEBUG ===');
+    console.log('Current packaging:', c);
+    console.log('Recommendations:', r);
+    console.log('Total cost:', c.total_cost);
+    console.log('Cost:', c.cost);
+    console.log('==========================');
     
     // Helper function to format values with fallback
     const formatValue = (val, unit = '', fallback = 'N/A') => {
@@ -1739,12 +1772,23 @@ function displayRecs(data) {
     // Find the best recommendation
     const bestRec = r[0]; // Already sorted by improvement_score
     
-    // Prepare chart data
+    // Prepare chart data with ACTUAL material names and correct cost field
     const chartData = {
-        labels: ['Current', ...r.slice(0, 5).map((rec, i) => `Option ${i+1}`)],
-        costs: [c.cost, ...r.slice(0, 5).map(rec => rec.predicted_cost)],
-        co2s: [c.co2, ...r.slice(0, 5).map(rec => rec.predicted_co2)]
+        labels: [
+            `Current\n${c.material}`,
+            ...r.slice(0, 5).map(rec => `${rec.material}\n${rec.shape}`)
+        ],
+        costs: [
+            parseFloat(c.total_cost || c.cost || 0),
+            ...r.slice(0, 5).map(rec => parseFloat(rec.predicted_cost || 0))
+        ],
+        co2s: [
+            parseFloat(c.co2 || 0),
+            ...r.slice(0, 5).map(rec => parseFloat(rec.predicted_co2 || 0))
+        ]
     };
+    
+    console.log('Chart Data Prepared:', chartData);
     
     let html = `
         <!-- Current Packaging Card -->
@@ -1817,7 +1861,7 @@ function displayRecs(data) {
                         <div class="text-center p-4" style="background: #ffffff; border-radius: 12px; border: 2px solid var(--burlywood); box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
                             <div class="mb-3">
                                 <div class="text-muted mb-1" style="font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">PREDICTED COST</div>
-                                <div class="display-6 fw-bold" style="color: var(--charcoal);">₹${c.cost ? parseFloat(c.cost).toFixed(2) : '0.00'}</div>
+                                <div class="display-6 fw-bold" style="color: var(--charcoal);">₹${(c.total_cost || c.cost) ? parseFloat(c.total_cost || c.cost).toFixed(2) : '0.00'}</div>
                             </div>
                             <hr style="border-color: #dee2e6; opacity: 0.5;">
                             <div>
@@ -1855,41 +1899,41 @@ function displayRecs(data) {
     `;
     
     r.forEach((rec, i) => {
-    const rankBadge = i === 0 ? 
-        '<span class="badge bg-warning text-dark" style="padding: 0.5rem 0.8rem; font-size: 0.9rem; font-weight: 600;">#1</span>' :
-        `<span class="badge bg-secondary" style="padding: 0.5rem 0.8rem; font-size: 0.9rem;">#${i+1}</span>`;
-    
-    const savingsClass = rec.cost_savings > 0 ? 'text-success' : 'text-danger';
-    const savingsIcon = rec.cost_savings > 0 ? '↓' : '↑';
-    
-    const co2Class = rec.co2_reduction > 0 ? 'text-success' : 'text-danger';
-    const co2Icon = rec.co2_reduction > 0 ? '↓' : '↑';
-    
-    const rowStyle = i === 0 ? 'background: #f8f9fa;' : '';
-    
-    html += `
-        <tr style="${rowStyle}">
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rankBadge}</td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
-                <span class="text-capitalize">${rec.material}</span>
-            </td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;" class="text-capitalize">${rec.shape}</td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rec.strength}</td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
-                <span class="fw-semibold">₹${formatValue(rec.predicted_cost, '')}</span>
-            </td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
-                <span class="${savingsClass} fw-semibold">${savingsIcon} ₹${Math.abs(rec.cost_savings).toFixed(2)}</span>
-            </td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
-                <span class="fw-semibold">${formatValue(rec.predicted_co2, '')}</span>
-            </td>
-            <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
-                <span class="${co2Class} fw-semibold">${co2Icon} ${Math.abs(rec.co2_reduction).toFixed(2)}</span>
-            </td>
-        </tr>
-    `;
-});
+        const rankBadge = i === 0 ? 
+            '<span class="badge bg-warning text-dark" style="padding: 0.5rem 0.8rem; font-size: 0.9rem; font-weight: 600;">#1</span>' :
+            `<span class="badge bg-secondary" style="padding: 0.5rem 0.8rem; font-size: 0.9rem;">#${i+1}</span>`;
+        
+        const savingsClass = rec.cost_savings > 0 ? 'text-success' : 'text-danger';
+        const savingsIcon = rec.cost_savings > 0 ? '↓' : '↑';
+        
+        const co2Class = rec.co2_reduction > 0 ? 'text-success' : 'text-danger';
+        const co2Icon = rec.co2_reduction > 0 ? '↓' : '↑';
+        
+        const rowStyle = i === 0 ? 'background: #f8f9fa;' : '';
+        
+        html += `
+            <tr style="${rowStyle}">
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rankBadge}</td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="text-capitalize">${rec.material}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;" class="text-capitalize">${rec.shape}</td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">${rec.strength}</td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="fw-semibold">₹${formatValue(rec.predicted_cost, '')}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="${savingsClass} fw-semibold">${savingsIcon} ₹${Math.abs(rec.cost_savings).toFixed(2)}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="fw-semibold">${formatValue(rec.predicted_co2, '')}</span>
+                </td>
+                <td style="padding: 1rem 1.5rem; border-top: 1px solid #e9ecef;">
+                    <span class="${co2Class} fw-semibold">${co2Icon} ${Math.abs(rec.co2_reduction).toFixed(2)}</span>
+                </td>
+            </tr>
+        `;
+    });
     
     html += `
                         </tbody>
@@ -1934,11 +1978,11 @@ function displayRecs(data) {
     document.getElementById('recResults').innerHTML = html;
     document.getElementById('recResults').classList.remove('hidden');
     
-    // Render charts
+    // Render charts with correct data
     setTimeout(() => renderRecCharts(chartData), 100);
 }
 
-// FIX #3: Render comparison charts in recommendation section
+// FIX #3: Render comparison charts in recommendation section - SORTED VERTICAL BARS
 function renderRecCharts(data) {
     const costCtx = document.getElementById('recCostChart');
     const co2Ctx = document.getElementById('recCO2Chart');
@@ -1963,24 +2007,60 @@ function renderRecCharts(data) {
     
     const currentColor = '#525252';  // Professional Gray for baseline
     
-    // Cost chart
+    // ============================================
+    // PREPARE SORTED DATA FOR COST CHART
+    // ============================================
+    // Create array of objects with label, cost, and original index
+    const costData = data.labels.map((label, i) => ({
+        label: label,
+        cost: data.costs[i],
+        co2: data.co2s[i],
+        isCurrent: i === 0,
+        originalIndex: i
+    }));
+    
+    // Sort by cost (ascending - lowest cost first)
+    const sortedByCost = [...costData].sort((a, b) => a.cost - b.cost);
+    
+    // Extract sorted labels and values for cost chart
+    const costLabels = sortedByCost.map(item => item.label);
+    const costValues = sortedByCost.map(item => item.cost);
+    const costColors = sortedByCost.map((item) => 
+        item.isCurrent ? currentColor : industrialColors[sortedByCost.indexOf(item) % industrialColors.length]
+    );
+    
+    // ============================================
+    // PREPARE SORTED DATA FOR CO2 CHART
+    // ============================================
+    // Sort by CO2 (ascending - lowest CO2 first)
+    const sortedByCO2 = [...costData].sort((a, b) => a.co2 - b.co2);
+    
+    // Extract sorted labels and values for CO2 chart
+    const co2Labels = sortedByCO2.map(item => item.label);
+    const co2Values = sortedByCO2.map(item => item.co2);
+    const co2Colors = sortedByCO2.map((item) => 
+        item.isCurrent ? currentColor : industrialColors[sortedByCO2.indexOf(item) % industrialColors.length]
+    );
+    
+    // ============================================
+    // COST CHART - SORTED VERTICAL BARS
+    // ============================================
     charts.recCost = new Chart(costCtx.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: data.labels,
+            labels: costLabels,
             datasets: [{
                 label: 'Cost (₹)',
-                data: data.costs,
-                backgroundColor: data.costs.map((val, i) => 
-                    i === 0 ? currentColor : industrialColors[(i-1) % industrialColors.length]
-                ),
+                data: costValues,
+                backgroundColor: costColors,
                 borderWidth: 0,
-                borderRadius: 3
+                borderRadius: 6
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
             plugins: {
                 legend: { 
                     display: false 
@@ -2029,9 +2109,11 @@ function renderRecCharts(data) {
                 x: {
                     grid: { display: false },
                     ticks: { 
-                        font: { size: 11, weight: '500', family: 'Inter' },
+                        font: { size: 10, weight: '500', family: 'Inter' },
                         color: '#374151',
-                        padding: 8
+                        padding: 8,
+                        maxRotation: 45,
+                        minRotation: 45
                     },
                     border: {
                         display: false
@@ -2041,24 +2123,25 @@ function renderRecCharts(data) {
         }
     });
     
-    // CO2 chart
+    // ============================================
+    // CO2 CHART - SORTED VERTICAL BARS
+    // ============================================
     charts.recCO2 = new Chart(co2Ctx.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: data.labels,
+            labels: co2Labels,
             datasets: [{
                 label: 'CO₂ Impact Score',
-                data: data.co2s,
-                backgroundColor: data.co2s.map((val, i) => 
-                    i === 0 ? currentColor : industrialColors[(i-1) % industrialColors.length]
-                ),
+                data: co2Values,
+                backgroundColor: co2Colors,
                 borderWidth: 0,
-                borderRadius: 3
+                borderRadius: 6
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
             plugins: {
                 legend: { 
                     display: false 
@@ -2106,9 +2189,11 @@ function renderRecCharts(data) {
                 x: {
                     grid: { display: false },
                     ticks: { 
-                        font: { size: 11, weight: '500', family: 'Inter' },
+                        font: { size: 10, weight: '500', family: 'Inter' },
                         color: '#374151',
-                        padding: 8
+                        padding: 8,
+                        maxRotation: 45,
+                        minRotation: 45
                     },
                     border: {
                         display: false
@@ -2120,6 +2205,7 @@ function renderRecCharts(data) {
 }
 
 // Render comparison charts
+// Render comparison charts - SORTED LOWEST TO HIGHEST
 function renderCompCharts(comparisons) {
     const costCtx = document.getElementById('compCostChart');
     const co2Ctx = document.getElementById('compCO2Chart');
@@ -2129,10 +2215,6 @@ function renderCompCharts(comparisons) {
     // Destroy existing charts if any
     if (charts.compCost) charts.compCost.destroy();
     if (charts.compCO2) charts.compCO2.destroy();
-    
-    const labels = comparisons.map(c => c.material.toUpperCase());
-    const costs = comparisons.map(c => c.cost);
-    const co2s = comparisons.map(c => c.co2);
     
     // Professional industrial colors
     const industrialColors = [
@@ -2146,21 +2228,38 @@ function renderCompCharts(comparisons) {
         '#17BECF'   // Professional Cyan
     ];
     
-    // Cost chart - Horizontal bar
+    // ============================================
+    // SORT BY COST (ASCENDING - LOWEST FIRST)
+    // ============================================
+    const sortedByCost = [...comparisons].sort((a, b) => a.cost - b.cost);
+    const costLabels = sortedByCost.map(c => c.material.toUpperCase());
+    const costValues = sortedByCost.map(c => c.cost);
+    const costColors = costValues.map((val, idx) => industrialColors[idx % industrialColors.length]);
+    
+    // ============================================
+    // SORT BY CO2 (ASCENDING - LOWEST FIRST)
+    // ============================================
+    const sortedByCO2 = [...comparisons].sort((a, b) => a.co2 - b.co2);
+    const co2Labels = sortedByCO2.map(c => c.material.toUpperCase());
+    const co2Values = sortedByCO2.map(c => c.co2);
+    const co2Colors = co2Values.map((val, idx) => industrialColors[idx % industrialColors.length]);
+    
+    // ============================================
+    // COST CHART - SORTED VERTICAL BARS
+    // ============================================
     charts.compCost = new Chart(costCtx.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: costLabels,
             datasets: [{
                 label: 'Predicted Cost (₹)',
-                data: costs,
-                backgroundColor: costs.map((val, idx) => industrialColors[idx % industrialColors.length]),
+                data: costValues,
+                backgroundColor: costColors,
                 borderWidth: 0,
-                borderRadius: 4
+                borderRadius: 6
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -2174,19 +2273,19 @@ function renderCompCharts(comparisons) {
                     borderColor: '#E5E7EB',
                     borderWidth: 1,
                     callbacks: {
-                        label: (context) => `Cost: ₹${context.parsed.x.toFixed(2)}`
+                        label: (context) => `Cost: ₹${context.parsed.y.toFixed(2)}`
                     }
                 }
             },
             scales: {
-                x: {
+                y: {
                     beginAtZero: true,
                     title: { 
                         display: true, 
                         text: 'Cost (₹)',
                         font: { weight: '600', size: 12, family: 'Inter' },
                         color: '#374151',
-                        padding: { top: 10, bottom: 0 }
+                        padding: { top: 0, bottom: 10 }
                     },
                     grid: { 
                         color: '#F3F4F6',
@@ -2194,6 +2293,7 @@ function renderCompCharts(comparisons) {
                         lineWidth: 1
                     },
                     ticks: {
+                        callback: (value) => '₹' + value.toFixed(0),
                         color: '#6B7280',
                         font: { size: 11, family: 'Inter' },
                         padding: 8
@@ -2202,7 +2302,7 @@ function renderCompCharts(comparisons) {
                         display: false
                     }
                 },
-                y: {
+                x: {
                     grid: { display: false },
                     ticks: {
                         color: '#374151',
@@ -2217,21 +2317,22 @@ function renderCompCharts(comparisons) {
         }
     });
     
-    // CO2 chart - Horizontal bar
+    // ============================================
+    // CO2 CHART - SORTED VERTICAL BARS
+    // ============================================
     charts.compCO2 = new Chart(co2Ctx.getContext('2d'), {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: co2Labels,
             datasets: [{
                 label: 'CO₂ Impact Score',
-                data: co2s,
-                backgroundColor: co2s.map((val, idx) => industrialColors[idx % industrialColors.length]),
+                data: co2Values,
+                backgroundColor: co2Colors,
                 borderWidth: 0,
-                borderRadius: 4
+                borderRadius: 6
             }]
         },
         options: {
-            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -2245,19 +2346,19 @@ function renderCompCharts(comparisons) {
                     borderColor: '#E5E7EB',
                     borderWidth: 1,
                     callbacks: {
-                        label: (context) => `CO₂ Score: ${context.parsed.x.toFixed(2)}`
+                        label: (context) => `CO₂ Score: ${context.parsed.y.toFixed(2)}`
                     }
                 }
             },
             scales: {
-                x: {
+                y: {
                     beginAtZero: true,
                     title: { 
                         display: true, 
                         text: 'CO₂ Impact Score',
                         font: { weight: '600', size: 12, family: 'Inter' },
                         color: '#374151',
-                        padding: { top: 10, bottom: 0 }
+                        padding: { top: 0, bottom: 10 }
                     },
                     grid: { 
                         color: '#F3F4F6',
@@ -2273,7 +2374,7 @@ function renderCompCharts(comparisons) {
                         display: false
                     }
                 },
-                y: {
+                x: {
                     grid: { display: false },
                     ticks: {
                         color: '#374151',
