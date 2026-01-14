@@ -1288,9 +1288,13 @@ def register():
         email = data.get('email', '').strip()  
         password = data.get('password', '')  
         full_name = data.get('full_name', '').strip()  
+        
+        # Validation
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
           
         if not validate_email(email):  
-            return jsonify({'error': 'Invalid email'}), 400  
+            return jsonify({'error': 'Invalid email format'}), 400  
           
         valid, msg = validate_password(password)  
         if not valid:  
@@ -1301,6 +1305,7 @@ def register():
         conn = get_db_connection()  
         if not conn:  
             return jsonify({'error': 'Database connection failed'}), 503  
+        
         cur = conn.cursor(cursor_factory=RealDictCursor)  
           
         try:  
@@ -1310,16 +1315,56 @@ def register():
             )  
             user_id = cur.fetchone()['id']  
             cur.execute('INSERT INTO user_analytics (user_id) VALUES (%s)', (user_id,))  
-            conn.commit()  
-            return jsonify({'message': 'Registered successfully', 'user_id': user_id}), 201  
+            conn.commit()
+            
+            # CRITICAL FIX: Create JWT token immediately after registration
+            token = jwt.encode({  
+                'user_id': user_id,  
+                'email': email,  
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)  
+            }, app.config['JWT_SECRET'], algorithm='HS256')
+            
+            cur.close()
+            conn.close()
+            
+            # Return success with token and cookie
+            response = jsonify({
+                'success': True,
+                'message': 'Registration successful', 
+                'user_id': user_id,
+                'token': token
+            })
+            
+            # Set cookie (same as login)
+            response.set_cookie(
+                'token',
+                token,
+                max_age=86400,
+                httponly=True,
+                samesite='Lax',
+                secure=True,
+                path='/'
+            )
+            
+            print(f"[Register Success] User {user_id} created - Token set")
+            
+            return response, 201
+            
         except psycopg2.IntegrityError:  
-            conn.rollback()  
+            conn.rollback()
+            cur.close()
+            conn.close()
             return jsonify({'error': 'Email already registered'}), 409  
-        finally:  
-            cur.close()  
-            conn.close()  
-    except Exception as e:  
-        return jsonify({'error': str(e)}), 500  
+        except Exception as db_error:
+            conn.rollback()
+            cur.close()
+            conn.close()
+            print(f"[Register Error] {db_error}")
+            return jsonify({'error': 'Registration failed'}), 500
+            
+    except Exception as e:
+        print(f"[Register Error] {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'An error occurred during registration'}), 500
   
 @app.route('/api/login', methods=['POST'])  
 def api_login():  
@@ -1327,54 +1372,86 @@ def api_login():
         data = request.get_json()
         email = data.get('email', '').strip()  
         password = data.get('password', '')  
+        
+        # Validation
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
+        
+        if not validate_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
           
         conn = get_db_connection()  
         if not conn: 
             return jsonify({'error': 'Database connection failed'}), 503
  
         cur = conn.cursor(cursor_factory=RealDictCursor)  
-        cur.execute('SELECT * FROM users WHERE email = %s', (email,))  
-        user = cur.fetchone()  
-          
-        if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
-            cur.close()
+        
+        try:
+            cur.execute('SELECT * FROM users WHERE email = %s', (email,))  
+            user = cur.fetchone()  
+            
+            if not user:
+                cur.close()
+                conn.close()
+                return jsonify({'error': 'Invalid email or password'}), 401
+            
+            # Check password
+            if not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
+                cur.close()
+                conn.close()
+                return jsonify({'error': 'Invalid email or password'}), 401
+            
+            # Update last login
+            cur.execute('UPDATE users SET last_login = %s WHERE id = %s', 
+                       (datetime.datetime.now(), user['id']))  
+            conn.commit()  
+            
+            # Create JWT token
+            token = jwt.encode({  
+                'user_id': user['id'],  
+                'email': user['email'],  
+                'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)  
+            }, app.config['JWT_SECRET'], algorithm='HS256')  
+            
+            cur.close()  
             conn.close()
-            return jsonify({'error': 'Invalid email or password'}), 401
-          
-        cur.execute('UPDATE users SET last_login = %s WHERE id = %s', (datetime.datetime.now(), user['id']))  
-        conn.commit()  
-          
-        token = jwt.encode({  
-            'user_id': user['id'],  
-            'email': user['email'],  
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)  
-        }, app.config['JWT_SECRET'], algorithm='HS256')  
-          
-        cur.close()  
-        conn.close()  
-    
-        # RETURN JSON RESPONSE
-        response = jsonify({
-            'success': True,
-            'message': 'Login successful',
-            'token': token
-        })
         
-        # SET COOKIE
-        response.set_cookie(
-            'token',
-            token,
-            max_age=86400,  # 24 hours
-            httponly=True,
-            samesite='Lax',
-            secure=True,  # Required for HTTPS (Render)
-            path='/'
-        )
-        
-        return response, 200
+            # CRITICAL FIX: Return JSON response with cookie
+            response = jsonify({
+                'success': True,
+                'message': 'Login successful',
+                'token': token,
+                'user': {
+                    'id': user['id'],
+                    'email': user['email'],
+                    'full_name': user.get('full_name')
+                }
+            })
+            
+            # Set cookie with SAME settings as Google OAuth
+            response.set_cookie(
+                'token',
+                token,
+                max_age=86400,  # 24 hours
+                httponly=True,
+                samesite='Lax',  # Same as Google OAuth
+                secure=True,     # Required for HTTPS (Render)
+                path='/'
+            )
+            
+            print(f"[Login Success] User {user['id']} - Token set in cookie")
+            
+            return response, 200
+            
+        except psycopg2.Error as db_error:
+            if conn:
+                conn.rollback()
+            print(f"[Login Error] Database error: {db_error}")
+            return jsonify({'error': 'Database error occurred'}), 500
     
-    except Exception as e:  
-        return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        print(f"[Login Error] {type(e).__name__}: {str(e)}")
+        return jsonify({'error': 'An error occurred during login'}), 500
 
 @app.route('/api/user/info', methods=['GET'])
 @token_required
