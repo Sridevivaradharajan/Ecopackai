@@ -266,13 +266,8 @@ class PredictionValidator:
      
 class MLModelManager:
     """
-    Complete ML model manager with robust feature engineering and validation
-    
-    Features:
-    - Exact feature order preservation from training
-    - Robust label encoding with fuzzy matching
-    - Comprehensive validation pipeline
-    - Detailed error reporting
+    PRODUCTION ML MODEL MANAGER
+    Matches training pipeline EXACTLY from notebook
     """
     
     def __init__(self):
@@ -282,92 +277,156 @@ class MLModelManager:
         self.cost_features = None
         self.co2_features = None
         
-        # Helper mappings (from notebook)
-        self.strength_map = {
-            'Low': 1.0, 'Medium': 2.2, 'High': 3.8, 'Very High': 5.5
+        # Material to parent_material mapping (CRITICAL)
+        self.parent_material_map = {
+            # Plastics
+            'plastic': 'plastic',
+            'pet': 'plastic',
+            'hdpe': 'plastic',
+            'ldpe': 'plastic',
+            'pp': 'plastic',
+            'ps': 'plastic',
+            'pvc': 'plastic',
+            'bioplastic': 'plastic',
+            
+            # Metals
+            'metal': 'metal',
+            'aluminium': 'metal',
+            'aluminum': 'metal',
+            'tinplate': 'metal',
+            'steel': 'metal',
+            
+            # Paper-based
+            'paper': 'paper-or-cardboard',
+            'cardboard': 'paper-or-cardboard',
+            'paperboard': 'paper-or-cardboard',
+            
+            # Glass
+            'glass': 'glass',
+            
+            # Composites
+            'composite': 'plastic',  # Most composites are plastic-based
+            'wood': 'unknown',
+            
+            # Fallback
+            'unknown': 'unknown'
         }
+    
+    def _infer_parent_material(self, material):
+        """
+        Infer parent_material from material using training logic
+        EXACT COPY from notebook preprocessing
+        """
+        material_lower = str(material).lower().strip()
         
-        self.material_cost_map = {
-            'plastic': 1.1, 'paper': 0.75, 'glass': 2.3, 'metal': 2.8,
-            'cardboard': 0.65, 'wood': 1.4, 'composite': 1.9,
-            'aluminium': 3.2, 'aluminum': 3.2, 'steel': 2.8,
-            'pe': 1.05, 'pp': 1.1, 'pet': 1.25, 'hdpe': 1.15, 'ldpe': 1.0,
-            'plastic 7': 1.1, 'unknown': 1.3
-        }
+        # Direct lookup
+        if material_lower in self.parent_material_map:
+            return self.parent_material_map[material_lower]
         
-        self.shape_complexity = {
-            'box': 1.0, 'bag': 0.75, 'bottle': 1.2, 'can': 1.15,
-            'jar': 1.3, 'pouch': 0.85, 'tray': 1.05, 'tube': 1.25,
-            'container': 1.1, 'wrapper': 0.8, 'packaging': 1.0,
-            'lid': 0.6, 'cap': 0.6, 'seal': 0.5, 'film': 0.7,
-            'unknown': 1.0
-        }
-
+        # Pattern matching (for variants)
+        if 'plastic' in material_lower or 'pe' in material_lower or 'pp' in material_lower:
+            return 'plastic'
+        elif 'metal' in material_lower or 'alumin' in material_lower or 'steel' in material_lower:
+            return 'metal'
+        elif 'paper' in material_lower or 'cardboard' in material_lower:
+            return 'paper-or-cardboard'
+        elif 'glass' in material_lower:
+            return 'glass'
+        else:
+            return 'unknown'
+    
     def _standardize_recycling(self, value):
-        """Standardize recycling values to match training categories"""
+        """EXACT standardization from training notebook"""
         if not value or pd.isna(value):
             return 'Recyclable'
         
         val_str = str(value).lower().strip()
         
-        # Translation map from training notebook
+        # Comprehensive mapping from notebook
         recycling_map = {
-            # Raw values from CSV
+            # Positive recycling
             'recycle': 'Recyclable',
             'recyclable': 'Recyclable',
             'yes': 'Recyclable',
+            'widely recyclable': 'Recyclable',
+            'recycle glass': 'Recyclable',
+            'recycle paper': 'Recyclable',
+            'recycle plastic': 'Recyclable',
+            'recycle metal': 'Recyclable',
             
+            # Negative
             'discard': 'Not Recyclable',
             'not recyclable': 'Not Recyclable',
             'no': 'Not Recyclable',
             
+            # Special categories
             'compost': 'Compost',
             'compostable': 'Compost',
-            
             'reuse': 'Reusable',
             'reusable': 'Reusable',
-            
             'deposit': 'Deposit Return',
             'deposit return': 'Deposit Return',
-            
             'return': 'Return to Store',
             'return to store': 'Return to Store',
+            
+            # Conditional
+            'recycle with conditions': 'Recycle with Conditions',
+            'recycle if clean': 'Recycle with Conditions'
         }
         
         return recycling_map.get(val_str, 'Recyclable')
-
+    
     def _standardize_shape(self, value):
-        """Translate raw shape values to training categories"""
+        """EXACT standardization from training notebook"""
         if not value or pd.isna(value):
             return 'bottle'
         
         val_str = str(value).lower().strip()
         
-        # Translation map from training notebook
+        # Comprehensive mapping from notebook
         shape_map = {
-            # Compound shapes
+            # Compound/descriptive names -> standard
             'individual-bag': 'bag',
-            'individual-pot': 'pot',
-            'resealable-bag': 'bag',
             'plastic-bag': 'bag',
+            'resealable-bag': 'bag',
+            'rectangular-bag': 'bag',
+            'transparent-bag': 'bag',
             
             'food-can': 'can',
             'drink-can': 'can',
             
             'bottle-cap': 'cap',
+            'pouring-cap': 'cap',
+            
             'twist-off-lid': 'lid',
+            'rectangular-lid': 'lid',
             
             'pizza-box': 'box',
+            'rectangular-box': 'box',
+            'corrugated-cardboard': 'box',
+            'egg-carton': 'box',
+            
             'rectangular': 'box',
             'square': 'box',
-            
             'round': 'container',
             'cone': 'container',
             
-            # Keep standard values as-is
+            'individual-pot': 'pot',
+            'small-dish': 'tray',
+            'multi-cell-tray': 'tray',
+            
+            'small-bottle': 'bottle',
+            'glass-jar': 'jar',
+            'reusable-glass': 'jar',
+            
+            'seal-film': 'film',
+            'foil-wrap': 'film',
+            'cellophane-wrap': 'film',
+            
+            # Standard shapes (keep as-is)
+            'bottle': 'bottle',
             'box': 'box',
             'bag': 'bag',
-            'bottle': 'bottle',
             'can': 'can',
             'jar': 'jar',
             'pouch': 'pouch',
@@ -379,16 +438,17 @@ class MLModelManager:
             'cap': 'cap',
             'lid': 'lid',
             'seal': 'seal',
-            'film': 'film'
+            'film': 'film',
+            'sleeve': 'sleeve'
         }
         
         return shape_map.get(val_str, val_str)
-     
+    
     def load_models(self):
-        """Load all model files with validation"""
+        """Load all model files with comprehensive validation"""
         try:
             print("="*80)
-            print("LOADING ML MODELS")
+            print("LOADING ML MODELS - PRODUCTION PIPELINE")
             print("="*80)
             
             model_dir = Path('models')
@@ -412,41 +472,33 @@ class MLModelManager:
             self.co2_model = joblib.load(required_files['co2_model'])
             self.label_encoders = joblib.load(required_files['encoders'])
             
-            # Load feature lists (MAINTAINS ORDER)
+            # Load feature lists (PRESERVES EXACT ORDER)
             with open(required_files['cost_features'], 'r') as f:
                 self.cost_features = [line.strip() for line in f if line.strip()]
             
             with open(required_files['co2_features'], 'r') as f:
                 self.co2_features = [line.strip() for line in f if line.strip()]
             
-            print(f"[OK] Cost model loaded: {len(self.cost_features)} features")
-            print(f"[OK] CO2 model loaded: {len(self.co2_features)} features")
-            print(f"[OK] Label encoders: {len(self.label_encoders)} categories")
+            print(f"[OK] Cost model: {len(self.cost_features)} features")
+            print(f"[OK] CO2 model: {len(self.co2_features)} features")
+            print(f"[OK] Encoders: {len(self.label_encoders)} categories")
             
-            # CRITICAL: Validate pipeline
+            # Validate pipeline
             return self._validate_feature_pipeline()
             
         except Exception as e:
-            print(f"[ERROR] Error loading models: {e}")
+            print(f"[ERROR] Loading failed: {e}")
             traceback.print_exc()
             return False
     
     def _validate_feature_pipeline(self):
-        """
-        Comprehensive validation of feature generation pipeline
-        
-        Tests:
-        1. All features can be generated
-        2. Feature order matches training
-        3. Encoders work correctly
-        4. Predictions are reasonable
-        """
+        """Comprehensive validation with actual test case"""
         try:
             print("\n" + "="*80)
             print("VALIDATING FEATURE PIPELINE")
             print("="*80)
             
-            # Test input (typical product)
+            # Test input (matches notebook validation)
             test_input = {
                 'product_quantity': 500,
                 'weight_measured': 50,
@@ -454,12 +506,14 @@ class MLModelManager:
                 'number_of_units': 1,
                 'recyclability_percent': 70,
                 'material': 'plastic',
-                'parent_material': 'plastic',
                 'shape': 'bottle',
                 'strength': 'Medium',
                 'recycling': 'Recyclable',
                 'food_group': 'fruit-juices'
             }
+            
+            # Add parent_material
+            test_input['parent_material'] = self._infer_parent_material(test_input['material'])
             
             print("\n[Test 1] Feature Generation")
             features = self.engineer_features(test_input)
@@ -485,30 +539,25 @@ class MLModelManager:
                 return False
             print(f"  [OK] All {len(self.co2_features)} CO2 features present")
             
-            # Validate feature order
-            print("\n[Test 4] Feature Order Verification")
-            X_cost = np.array([features[f] for f in self.cost_features]).reshape(1, -1)
-            X_co2 = np.array([features[f] for f in self.co2_features]).reshape(1, -1)
-            print(f"  [OK] Cost array shape: {X_cost.shape}")
-            print(f"  [OK] CO2 array shape: {X_co2.shape}")
-            
             # Test predictions
-            print("\n[Test 5] Prediction Test")
-            cost_pred = float(self.cost_model.predict(X_cost)[0])
-            co2_log = self.co2_model.predict(X_co2)[0]
-            co2_pred = float(np.expm1(co2_log))
+            print("\n[Test 4] Prediction Test")
+            cost_pred, co2_pred, _ = self.predict(test_input)
             
-            print(f"  [RESULT] Cost: Rs.{cost_pred:.2f}")
+            if cost_pred is None or co2_pred is None:
+                print("  [CRITICAL] Prediction failed")
+                return False
+            
+            print(f"  [RESULT] Cost: ₹{cost_pred:.2f}")
             print(f"  [RESULT] CO2: {co2_pred:.2f}")
             
             # Sanity checks
-            if cost_pred <= 0 or cost_pred > 10000:
-                print(f"  [WARNING] Unusual cost prediction: Rs.{cost_pred:.2f}")
-            if co2_pred <= 0 or co2_pred > 1000:
-                print(f"  [WARNING] Unusual CO2 prediction: {co2_pred:.2f}")
+            if not (1 <= cost_pred <= 500):
+                print(f"  [WARNING] Unusual cost: ₹{cost_pred:.2f}")
+            if not (0.1 <= co2_pred <= 500):
+                print(f"  [WARNING] Unusual CO2: {co2_pred:.2f}")
             
             print("\n" + "="*80)
-            print("VALIDATION PASSED")
+            print("✓ VALIDATION PASSED - Pipeline matches training")
             print("="*80)
             return True
             
@@ -519,9 +568,8 @@ class MLModelManager:
     
     def _encode_categorical(self, value, column_name):
         """
-        Categorical encoding WITH preprocessing/standardization
-        
-        Key addition: Standardize recycling/shape BEFORE encoding
+        Encode categorical with standardization
+        CRITICAL: Standardize BEFORE encoding
         """
         if column_name not in self.label_encoders:
             print(f"[ERROR] No encoder for {column_name}")
@@ -530,9 +578,7 @@ class MLModelManager:
         encoder = self.label_encoders[column_name]
         available_classes = list(encoder.classes_)
         
-        # ================================================================
-        # STEP 1: STANDARDIZE INPUT (NEW - This fixes bulk upload!)
-        # ================================================================
+        # STEP 1: STANDARDIZE (CRITICAL)
         if column_name == 'recycling':
             value = self._standardize_recycling(value)
         elif column_name == 'shape':
@@ -540,120 +586,32 @@ class MLModelManager:
         
         value_str = str(value).strip()
         
-        # ================================================================
         # STEP 2: EXACT MATCH
-        # ================================================================
         if value_str in available_classes:
             return int(encoder.transform([value_str])[0])
         
-        # ================================================================
         # STEP 3: CASE-INSENSITIVE MATCH
-        # ================================================================
         value_lower = value_str.lower()
         for cls in available_classes:
             if str(cls).lower() == value_lower:
                 return int(encoder.transform([str(cls)])[0])
         
-        # ================================================================
-        # STEP 4: KNOWN ALIASES (for material/parent_material only)
-        # ================================================================
-        aliases = {
-            'material': {
-                'aluminum': 'aluminium',
-                'carton': 'cardboard'
-            },
-            'parent_material': {
-                'aluminum': 'metal',
-                'aluminium': 'metal',
-                'cardboard': 'paper-or-cardboard',
-                'paper': 'paper-or-cardboard'
-            }
-        }
-        
-        if column_name in aliases:
-            mapped = aliases[column_name].get(value_lower)
-            if mapped and mapped in available_classes:
-                return int(encoder.transform([mapped])[0])
-        
-        # ================================================================
-        # STEP 5: SAFE FALLBACK
-        # ================================================================
+        # STEP 4: SAFE FALLBACK
         if available_classes:
             print(f"[WARNING] Unknown {column_name}='{value}', using: '{available_classes[0]}'")
             return int(encoder.transform([available_classes[0]])[0])
         
-        print(f"[CRITICAL] No encoder classes for {column_name}")
         return 0
-    
-    def _infer_parent_material(self, material):
-    """
-    Infer parent_material from material using training logic
-    EXACT COPY from notebook preprocessing
-    """
-    material_lower = str(material).lower().strip()
-    
-    # Comprehensive mapping
-    parent_material_map = {
-        # Plastics
-        'plastic': 'plastic',
-        'pet': 'plastic',
-        'hdpe': 'plastic',
-        'ldpe': 'plastic',
-        'pp': 'plastic',
-        'ps': 'plastic',
-        'pvc': 'plastic',
-        'bioplastic': 'plastic',
-        
-        # Metals
-        'metal': 'metal',
-        'aluminium': 'metal',
-        'aluminum': 'metal',
-        'tinplate': 'metal',
-        'steel': 'metal',
-        
-        # Paper-based
-        'paper': 'paper-or-cardboard',
-        'cardboard': 'paper-or-cardboard',
-        'paperboard': 'paper-or-cardboard',
-        
-        # Glass
-        'glass': 'glass',
-        
-        # Composites
-        'composite': 'plastic',
-        'wood': 'unknown',
-        
-        # Fallback
-        'unknown': 'unknown'
-    }
-    
-    # Direct lookup
-    if material_lower in parent_material_map:
-        return parent_material_map[material_lower]
-    
-    # Pattern matching (for variants)
-    if 'plastic' in material_lower or 'pe' in material_lower or 'pp' in material_lower:
-        return 'plastic'
-    elif 'metal' in material_lower or 'alumin' in material_lower or 'steel' in material_lower:
-        return 'metal'
-    elif 'paper' in material_lower or 'cardboard' in material_lower:
-        return 'paper-or-cardboard'
-    elif 'glass' in material_lower:
-        return 'glass'
-    else:
-        return 'unknown'
     
     def engineer_features(self, product_dict):
         """
-        COMPLETE FEATURE ENGINEERING - Matches notebook exactly
-        
-        Generates ALL features needed by both Cost and CO2 models
-        Returns dict with ALL required features in correct format
+        EXACT FEATURE ENGINEERING from training notebook
+        Must match line-by-line to ensure correct predictions
         """
         features = {}
         
         # ================================================================
-        # STEP 1: RAW NUMERIC FEATURES
+        # RAW NUMERIC FEATURES
         # ================================================================
         features['product_quantity'] = float(product_dict.get('product_quantity', 500))
         features['weight_measured'] = float(product_dict.get('weight_measured', 50))
@@ -662,37 +620,21 @@ class MLModelManager:
         features['number_of_units'] = int(product_dict.get('number_of_units', 1))
         
         # ================================================================
-        # STEP 2: HELPER FEATURES (Must be calculated FIRST)
+        # CATEGORICAL ENCODINGS
         # ================================================================
+        material = str(product_dict.get('material', 'plastic')).lower().strip()
+        shape = str(product_dict.get('shape', 'bottle')).lower().strip()
+        strength = str(product_dict.get('strength', 'Medium')).strip()
         
-        # Strength numeric mapping
-        strength = product_dict.get('strength', 'Medium')
-        features['strength_num'] = self.strength_map.get(strength, 2.2)
-        
-        # Material cost factor (case-insensitive lookup)
-        material = product_dict.get('material', 'plastic')
-        material_lower = material.lower()
-        features['material_cost_factor'] = self.material_cost_map.get(
-            material_lower,
-            self.material_cost_map.get(material, 1.3)
-        )
-        
-        # Shape complexity (case-insensitive lookup)
-        shape = product_dict.get('shape', 'bottle')
-        shape_lower = shape.lower()
-        features['shape_complexity'] = self.shape_complexity.get(
-            shape_lower,
-            self.shape_complexity.get(shape, 1.0)
-        )
-        
-        # ================================================================
-        # STEP 3: CATEGORICAL ENCODINGS
-        # ================================================================
+        # CRITICAL: Use centralized inference
+        parent_material = product_dict.get('parent_material')
+        if not parent_material or str(parent_material).lower() in ['', 'nan', 'none', 'unknown']:
+            parent_material = self._infer_parent_material(material)
         
         categorical_fields = {
             'food_group': product_dict.get('food_group', 'fruit-juices'),
             'material': material,
-            'parent_material': product_dict.get('parent_material') or self._infer_parent_material(material),
+            'parent_material': parent_material,
             'recycling': product_dict.get('recycling', 'Recyclable'),
             'shape': shape,
             'strength': strength
@@ -703,7 +645,7 @@ class MLModelManager:
             features[encoded_name] = self._encode_categorical(value, field_name)
         
         # ================================================================
-        # STEP 4: POLYNOMIAL FEATURES (weight transformations)
+        # POLYNOMIAL FEATURES
         # ================================================================
         weight = features['weight_measured']
         
@@ -712,9 +654,8 @@ class MLModelManager:
         features['weight_sqrt'] = np.sqrt(weight)
         
         # ================================================================
-        # STEP 5: INTERACTION FEATURES
+        # INTERACTION FEATURES
         # ================================================================
-        
         capacity = features['weight_capacity']
         material_enc = features['material_encoded']
         parent_mat_enc = features['parent_material_encoded']
@@ -735,9 +676,8 @@ class MLModelManager:
         features['shape_weight'] = shape_enc * weight
         
         # ================================================================
-        # STEP 6: COST-SPECIFIC DERIVED FEATURES
+        # COST-SPECIFIC DERIVED FEATURES
         # ================================================================
-        
         product_qty = features['product_quantity']
         features['packaging_ratio'] = weight / (product_qty + 1)
         
@@ -749,94 +689,33 @@ class MLModelManager:
     
     def predict(self, product_dict):
         """
-        Generate predictions for cost and CO2
-        
-        CRITICAL: Features are extracted in EXACT order from cost_features.txt / co2_features.txt
-        
-        Returns:
-            cost_pred (float): Predicted packaging cost
-            co2_pred (float): Predicted CO2 impact
-            features (dict): All engineered features
+        Generate predictions with EXACT feature order
+        Returns: (cost_pred, co2_pred, features_dict)
         """
         try:
             if self.cost_model is None or self.co2_model is None:
-                # Fallback prediction
-                weight = float(product_dict.get('weight_measured', 50))
-                material = product_dict.get('material', 'plastic').lower()
-                
-                base_cost = self.material_cost_map.get(material, 1.5)
-                cost_pred = base_cost * weight * 0.02
-                co2_pred = weight * 0.5
-                
-                print("[WARNING] Using fallback prediction (models not loaded)")
-                return cost_pred, co2_pred, {}
+                print("[ERROR] Models not loaded")
+                return None, None, None
             
-            # ================================================================
-            # STEP 1: Generate ALL features
-            # ================================================================
+            # Generate ALL features
             features = self.engineer_features(product_dict)
             
-            # ================================================================
-            # STEP 2: COST PREDICTION - Maintain exact feature order
-            # ================================================================
-            X_cost = []
-            missing_cost_features = []
-            
-            for feat in self.cost_features:
-                if feat in features:
-                    X_cost.append(features[feat])
-                else:
-                    missing_cost_features.append(feat)
-                    # Intelligent defaults
-                    if 'encoded' in feat:
-                        X_cost.append(0)
-                    elif 'ratio' in feat or 'percent' in feat:
-                        X_cost.append(1.0)
-                    else:
-                        X_cost.append(0)
-            
-            if missing_cost_features:
-                print(f"[CRITICAL] Missing {len(missing_cost_features)} cost features:")
-                for feat in missing_cost_features[:5]:
-                    print(f"  - {feat}")
-                print("[ERROR] This will cause prediction errors!")
-            
-            X_cost = np.array(X_cost).reshape(1, -1)
+            # ============================================================
+            # COST PREDICTION - EXACT ORDER
+            # ============================================================
+            X_cost = np.array([features[f] for f in self.cost_features]).reshape(1, -1)
             cost_pred = float(self.cost_model.predict(X_cost)[0])
             
-            # ================================================================
-            # STEP 3: CO2 PREDICTION - Maintain exact feature order
-            # ================================================================
-            X_co2 = []
-            missing_co2_features = []
-            
-            for feat in self.co2_features:
-                if feat in features:
-                    X_co2.append(features[feat])
-                else:
-                    missing_co2_features.append(feat)
-                    if 'encoded' in feat:
-                        X_co2.append(0)
-                    elif 'ratio' in feat or 'percent' in feat:
-                        X_co2.append(1.0)
-                    else:
-                        X_co2.append(0)
-            
-            if missing_co2_features:
-                print(f"[CRITICAL] Missing {len(missing_co2_features)} CO2 features:")
-                for feat in missing_co2_features[:5]:
-                    print(f"  - {feat}")
-                print("[ERROR] This will cause prediction errors!")
-            
-            X_co2 = np.array(X_co2).reshape(1, -1)
-            
-            # CRITICAL: Model was trained on log-transformed CO2 values
+            # ============================================================
+            # CO2 PREDICTION - EXACT ORDER + LOG TRANSFORM
+            # ============================================================
+            X_co2 = np.array([features[f] for f in self.co2_features]).reshape(1, -1)
             co2_pred_log = self.co2_model.predict(X_co2)[0]
             co2_pred = float(np.expm1(co2_pred_log))
             
-            # ================================================================
-            # STEP 4: PROFESSIONAL VALIDATION (REPLACE EXISTING)
-            # ================================================================
+            # ============================================================
+            # VALIDATION
+            # ============================================================
             is_valid, diagnostics = PredictionValidator.validate_prediction(
                 cost_pred=cost_pred,
                 co2_pred=co2_pred,
@@ -847,7 +726,7 @@ class MLModelManager:
             return cost_pred, co2_pred, features
             
         except Exception as e:
-            print(f"[ERROR] Prediction error: {e}")
+            print(f"[ERROR] Prediction failed: {e}")
             traceback.print_exc()
             return None, None, None
   
