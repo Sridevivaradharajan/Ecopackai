@@ -1,0 +1,98 @@
+{
+  "created": "2026-01-13 19:40:27",
+  "source_dataframe": "df_eng",
+  "total_rows": 5041,
+  "total_features": 21,
+  "cost_features": [
+    "capacity_weight_prod",
+    "material_weight",
+    "weight_log",
+    "packaging_ratio",
+    "strength_encoded",
+    "parent_material_encoded",
+    "weight_squared",
+    "recyclability_percent",
+    "material_encoded",
+    "weight_capacity",
+    "recycling_encoded",
+    "shape_encoded",
+    "food_group_encoded",
+    "capacity_weight_ratio"
+  ],
+  "co2_features": [
+    "weight_measured",
+    "product_quantity",
+    "number_of_units",
+    "weight_capacity",
+    "material_encoded",
+    "parent_material_encoded",
+    "shape_encoded",
+    "recycling_encoded",
+    "food_group_encoded",
+    "strength_encoded",
+    "weight_squared",
+    "weight_log",
+    "weight_sqrt",
+    "capacity_weight_prod",
+    "material_weight",
+    "material_weight_sq",
+    "parent_mat_weight",
+    "shape_weight"
+  ],
+  "shared_features": [
+    "weight_capacity",
+    "weight_log",
+    "weight_squared",
+    "food_group_encoded",
+    "shape_encoded",
+    "strength_encoded",
+    "recycling_encoded",
+    "material_encoded",
+    "material_weight",
+    "parent_material_encoded",
+    "capacity_weight_prod"
+  ],
+  "cost_only_features": [
+    "packaging_ratio",
+    "capacity_weight_ratio",
+    "recyclability_percent"
+  ],
+  "co2_only_features": [
+    "weight_sqrt",
+    "number_of_units",
+    "weight_measured",
+    "material_weight_sq",
+    "shape_weight",
+    "product_quantity",
+    "parent_mat_weight"
+  ],
+  "feature_categories": {
+    "raw_numeric": [
+      "number_of_units",
+      "product_quantity",
+      "recyclability_percent",
+      "weight_capacity",
+      "weight_measured"
+    ],
+    "encoded": [
+      "food_group_encoded",
+      "material_encoded",
+      "parent_material_encoded",
+      "recycling_encoded",
+      "shape_encoded",
+      "strength_encoded"
+    ],
+    "engineered": [
+      "capacity_weight_prod",
+      "capacity_weight_ratio",
+      "material_weight",
+      "material_weight_sq",
+      "packaging_ratio",
+      "parent_mat_weight",
+      "shape_weight",
+      "weight_log",
+      "weight_sqrt",
+      "weight_squared"
+    ]
+  }
+}
