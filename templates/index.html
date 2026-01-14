@@ -663,7 +663,7 @@
 
                     <div class="divider"><span>or continue with</span></div>
 
-                    <button type="button" class="btn-google" onclick="window.location.href='http://localhost:5000/auth/google'">
+                    <button type="button" class="btn-google" onclick="window.location.href='/auth/google'">
                         <svg width="20" height="20" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
                             <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285F4"/>
                             <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z" fill="#34A853"/>
@@ -679,8 +679,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE = 'http://localhost:5000/api';
-
+        // Auto-detect API base URL
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5000/api'
+            : `${window.location.origin}/api`;
+        
+        console.log('API Base URL:', API_BASE);
+    
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -693,7 +698,7 @@
                 document.getElementById('register-tab').classList.add('active');
             }
         }
-
+    
         // Password toggle
         document.getElementById('toggleLoginPassword').addEventListener('click', function() {
             const input = document.getElementById('loginPassword');
@@ -701,15 +706,22 @@
             this.classList.toggle('bi-eye');
             this.classList.toggle('bi-eye-slash');
         });
-
+    
         document.getElementById('toggleRegisterPassword').addEventListener('click', function() {
             const input = document.getElementById('registerPassword');
             input.type = input.type === 'password' ? 'text' : 'password';
             this.classList.toggle('bi-eye');
             this.classList.toggle('bi-eye-slash');
         });
-
-        // Password strength
+    
+        document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
+            const input = document.getElementById('confirmPassword');
+            input.type = input.type === 'password' ? 'text' : 'password';
+            this.classList.toggle('bi-eye');
+            this.classList.toggle('bi-eye-slash');
+        });
+    
+        // Password strength indicator
         document.getElementById('registerPassword').addEventListener('input', function(e) {
             const password = e.target.value;
             const bar = document.getElementById('strengthBar');
@@ -726,14 +738,7 @@
             else if (strength === 3) bar.classList.add('strength-medium');
             else bar.classList.add('strength-strong');
         });
-
-        document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
-            const input = document.getElementById('confirmPassword');
-            input.type = input.type === 'password' ? 'text' : 'password';
-            this.classList.toggle('bi-eye');
-            this.classList.toggle('bi-eye-slash');
-        });
-
+    
         function showAlert(message, type = 'danger') {
             const alert = document.getElementById('alertContainer');
             alert.innerHTML = `
@@ -742,8 +747,8 @@
                 </div>`;
             setTimeout(() => alert.innerHTML = '', 5000);
         }
-
-        // Login Form
+    
+        // LOGIN FORM - Already correct!
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -762,17 +767,20 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Signing in...';
             
             try {
-                // Make JSON API call
+                console.log('Sending login request to:', `${API_BASE}/login`);
+                
                 const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
-                    credentials: 'include',  // CRITICAL: Send cookies
+                    credentials: 'include',  // ✅ CRITICAL: Send/receive cookies
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ email, password })
                 });
                 
+                console.log('Login response status:', response.status);
                 const data = await response.json();
+                console.log('Login response data:', data);
                 
                 if (response.ok && data.success) {
                     // SUCCESS - Show message and redirect
@@ -796,41 +804,68 @@
             }
         });
         
-        // Register Form
+        // REGISTER FORM - FIXED VERSION
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const name = document.getElementById('registerName').value.trim();
             const email = document.getElementById('registerEmail').value.trim();
             const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
             const btn = document.getElementById('registerBtn');
+            
+            // Password match validation
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match!');
+                return;
+            }
+            
+            // Basic validation
+            if (!name || !email || !password) {
+                showAlert('Please fill in all fields');
+                return;
+            }
+            
+            // Email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showAlert('Please enter a valid email address');
+                return;
+            }
             
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creating...';
             
             try {
+                console.log('Sending registration request to:', `${API_BASE}/register`);
+                
                 const response = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
+                    credentials: 'include',  // Send/receive cookies
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ full_name: name, email, password })
                 });
                 
+                console.log('Register response status:', response.status);
                 const data = await response.json();
+                console.log('Register response data:', data);
                 
-                if (response.ok) {
-                    showAlert('✓ Account created! Please sign in.', 'success');
-                    document.getElementById('registerForm').reset();
-                    document.getElementById('strengthBar').className = 'password-strength';
+                if (response.ok && data.success) {
+                    // Now redirects to dashboard (backend sets JWT cookie)
+                    showAlert('✓ Account created! Redirecting to dashboard...', 'success');
+                    
+                    // Redirect to dashboard after brief delay
                     setTimeout(() => {
-                        switchTab('login');
-                        document.getElementById('loginEmail').value = email;
+                        window.location.href = '/dashboard';
                     }, 1500);
                 } else {
                     showAlert(data.error || 'Registration failed');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-person-plus"></i><span>Create Account</span>';
                 }
             } catch (error) {
+                console.error('Registration error:', error);
                 showAlert('Unable to connect to server. Please check if backend is running.');
-            } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bi bi-person-plus"></i><span>Create Account</span>';
             }
